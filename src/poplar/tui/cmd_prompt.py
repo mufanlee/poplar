@@ -4,16 +4,6 @@ from textual.widgets import Static
 from textual.binding import Binding
 from textual.screen import Screen
 from textual.containers import Vertical
-from textual.message import Message
-from typing import List
-
-
-class CommandSelected(Message):
-    """Posted when user selects a command from the suggestion list."""
-
-    def __init__(self, command: str):
-        self.command = command
-        super().__init__()
 
 
 _COMMANDS = [
@@ -49,9 +39,10 @@ class CommandSuggestion(Screen[str]):
     def compose(self):
         with Vertical(id="cmd-box"):
             yield Static(" Commands ", id="cmd-title")
-            for cmd, desc in self._matching():
-                prefix = "● " if (cmd, desc) == self._selected else "  "
-                yield Static(f"{prefix}{cmd} [dim]— {desc}[/dim]", id=f"cmd-{cmd}")
+            yield Static(id="cmd-list")
+
+    def on_mount(self):
+        self._render_list()
 
     def _matching(self):
         return [(c, d) for c, d in _COMMANDS if self._filter in c.lower()]
@@ -61,23 +52,31 @@ class CommandSuggestion(Screen[str]):
         items = self._matching()
         if not items:
             return ("", "")
-        idx = self._index % len(items)
-        return items[idx]
+        return items[self._index % len(items)]
 
-    def on_mount(self):
-        self.query_one("#cmd-title").focus()
+    def _render_list(self):
+        items = self._matching()
+        if not items:
+            self.query_one("#cmd-list").update("[dim]No matching commands[/dim]")
+            return
+
+        lines = []
+        for i, (cmd, desc) in enumerate(items):
+            prefix = "●" if i == (self._index % len(items)) else " "
+            lines.append(f"{prefix} {cmd}  [dim]— {desc}[/dim]")
+        self.query_one("#cmd-list").update("\n".join(lines))
 
     def action_nav_up(self):
         items = self._matching()
         if items:
             self._index = (self._index - 1) % len(items)
-            self._refresh()
+            self._render_list()
 
     def action_nav_down(self):
         items = self._matching()
         if items:
             self._index = (self._index + 1) % len(items)
-            self._refresh()
+            self._render_list()
 
     def action_select(self):
         cmd, _ = self._selected
@@ -86,11 +85,6 @@ class CommandSuggestion(Screen[str]):
 
     def action_dismiss_none(self):
         self.dismiss(None)
-
-    def _refresh(self):
-        self.remove_children(compose=False)
-        self.compose()
-        self.mount_composed_widgets()
 
     DEFAULT_CSS = """
     CommandSuggestion {
@@ -109,7 +103,8 @@ class CommandSuggestion(Screen[str]):
         text-align: center;
         width: 100%;
     }
-    CommandSuggestion Static {
-        height: 1;
+    #cmd-list {
+        width: 100%;
+        height: auto;
     }
     """

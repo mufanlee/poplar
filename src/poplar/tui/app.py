@@ -345,14 +345,14 @@ class PoplarApp(App):
         elapsed = int(time.time() - self._thinking_start_time)
         chat_view = self.query_one(ChatView)
 
-        # Update thinking message display
-        chat_view.messages = [
-            Message(role=Role.SYSTEM, content=f"{frame} {t('thinking')}... ({t('esc_to_cancel')}, {elapsed}{t('seconds')})")
-            if self._is_thinking_msg(m)
-            else m
-            for m in chat_view.messages
-        ]
-        chat_view.chat_display.update_messages(chat_view.messages)
+        # Update thinking message display using widget update
+        chat_view.update_message_widget(
+            predicate=lambda w: hasattr(w, '_msg') and self._is_thinking_msg(w._msg),
+            make_message=lambda w: Message(
+                role=Role.SYSTEM,
+                content=f"{frame} {t('thinking')}... ({t('esc_to_cancel')}, {elapsed}{t('seconds')})"
+            ),
+        )
         self.set_timer(0.1, self._animate_spinner)
 
     def _stop_spinner(self):
@@ -377,7 +377,6 @@ class PoplarApp(App):
             chat_view.messages = [m for m in chat_view.messages 
                                  if not self._is_thinking_msg(m) 
                                  and m is not self._streaming_msg]
-            chat_view.chat_display.update_messages(chat_view.messages)
             
             cancel_msg = Message(role=Role.SYSTEM, content=t("request_cancelled"))
             self.session.add_message(cancel_msg)
@@ -539,18 +538,29 @@ class PoplarApp(App):
         if self._thinking:
             self._stop_spinner()
             self.session.messages = [m for m in self.session.messages if not self._is_thinking_msg(m)]
-            chat_view.messages = [m for m in chat_view.messages if not self._is_thinking_msg(m)]
+
+            # Remove thinking message widget
+            for child in list(chat_view.chat_display.children):
+                if isinstance(child, MessageWidget) and self._is_thinking_msg(child._msg):
+                    child.remove()
+
             self._streaming_msg = Message(role=Role.ASSISTANT, content=content)
-            chat_view.messages = chat_view.messages + [self._streaming_msg]
+            # Mount streaming widget
+            w = MessageWidget(self._streaming_msg)
+            chat_view.chat_display.mount(w)
         else:
-            # Update or append - don't overwrite if content is shorter (new turn)
+            # Update existing widget or mount new one
             if self._streaming_msg is not None:
                 self._streaming_msg.content = content
+                chat_view.update_message_widget(
+                    predicate=lambda w: hasattr(w, '_msg') and w._msg is self._streaming_msg,
+                    make_message=lambda w: self._streaming_msg,
+                )
             else:
                 self._streaming_msg = Message(role=Role.ASSISTANT, content=content)
-                chat_view.messages = chat_view.messages + [self._streaming_msg]
-            chat_view.messages = chat_view.messages.copy()
-        chat_view.chat_display.update_messages(chat_view.messages)
+                w = MessageWidget(self._streaming_msg)
+                chat_view.chat_display.mount(w)
+
         chat_view.scroll_end(animate=False)
 
     def _finalize_streaming(self, content: str):
@@ -643,10 +653,9 @@ class PoplarApp(App):
         ctx.apply_compression(self.session, summary, recent_msgs)
         self._total_tokens = ctx.get_cumulative_token_count(self.session)
 
-        # Reload chat view
+        # Reload chat view via reactive
         chat_view = self.query_one(ChatView)
         chat_view.messages = list(self.session.messages)
-        chat_view.chat_display.update_messages(chat_view.messages)
         chat_view.scroll_end(animate=False)
 
         self._update_status_bar()
@@ -703,10 +712,15 @@ class PoplarApp(App):
         self._stop_spinner()
         chat_view = self.query_one(ChatView)
 
-        # Remove thinking messages
+        # Remove thinking message widgets
+        for child in list(chat_view.chat_display.children):
+            if isinstance(child, MessageWidget) and self._is_thinking_msg(child._msg):
+                child.remove()
+
+        # Clean session messages
         self.session.messages = [m for m in self.session.messages if not self._is_thinking_msg(m)]
-        chat_view.messages = [m for m in chat_view.messages if not self._is_thinking_msg(m)]
-        chat_view.chat_display.update_messages(chat_view.messages)
+        # Rebuild chat view to match session
+        chat_view._rebuild(self.session.messages)
 
         # Show error as assistant message
         error_msg = Message(role=Role.ASSISTANT, content=f"[red]{t('error')}: {error}[/red]")

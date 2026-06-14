@@ -1,5 +1,8 @@
+"""Chat message display widgets — each message is individually clickable for copy."""
+
 from textual.widgets import Static
 from textual.containers import ScrollableContainer
+from textual.message import Message as TMessage
 from textual.reactive import reactive
 from rich.align import Align
 from rich.text import Text
@@ -44,90 +47,150 @@ def build_welcome():
     return Align.center(panel)
 
 
-class ChatMessages(Static):
-    """Static widget to display chat messages."""
+class MessageCopied(TMessage):
+    """Posted when a message is clicked for copying."""
+    def __init__(self, content: str):
+        self.content = content
+        super().__init__()
+
+
+class MessageWidget(Static):
+    """A single clickable chat message."""
+
+    def __init__(self, message: Message):
+        super().__init__()
+        self._msg = message
+        self._build_renderable()
+
+    def _build_renderable(self):
+        msg = self._msg
+        if msg.role == Role.USER:
+            self.update(Panel(
+                Text(msg.content),
+                title=f"👤 {t('title_you')}",
+                border_style="blue",
+                padding=(0, 1),
+            ))
+        elif msg.role == Role.ASSISTANT:
+            self.update(Panel(
+                Markdown(msg.content),
+                title=f"🤖 {t('title_assistant')}",
+                border_style="green",
+                padding=(0, 1),
+                expand=False,
+            ))
+        elif msg.role == Role.SYSTEM:
+            self.update(Text(f"  {msg.content}", style="dim yellow"))
+        elif msg.role == Role.TOOL:
+            name = msg.name or "tool"
+            preview = msg.content[:500] + "..." if len(msg.content) > 500 else msg.content
+            lines = [f"{t('tool_result_prefix', name=name)}:"]
+            for line in preview.split("\n")[:10]:
+                lines.append(f"  {line}")
+            self.update(Text("\n".join(lines), style="dim"))
+
+    def on_click(self):
+        """Click to copy message content to clipboard."""
+        content = self._msg.content
+        if content:
+            self.app.copy_to_clipboard(content)
+            self.app.notify(f"📋 Copied: {content[:60]}...")
 
     DEFAULT_CSS = """
-    ChatMessages {
+    MessageWidget {
         height: auto;
+        margin: 0 0 0 0;
     }
-    ChatMessages.welcome {
+    MessageWidget:hover {
+        /* Slight brightness change on hover to indicate clickability */
+        background: $boost;
+    }
+    """
+
+
+class WelcomeWidget(Static):
+    """Full-screen welcome widget, shown when there are no messages."""
+
+    DEFAULT_CSS = """
+    WelcomeWidget {
         height: 100%;
         content-align: center middle;
     }
     """
 
-    MAX_VISIBLE = 100
-
-    def update_messages(self, messages: list[Message]):
-        if not messages:
-            self.add_class("welcome")
-            self.update(build_welcome())
-            return
-
-        self.remove_class("welcome")
-        display_msgs = messages[-self.MAX_VISIBLE:] if len(messages) > self.MAX_VISIBLE else messages
-        renderables = []
-
-        if len(messages) > self.MAX_VISIBLE:
-            renderables.append(Text(
-                f"  [dim]... {len(messages) - self.MAX_VISIBLE} earlier messages hidden[/dim]\n"
-            ))
-        
-        for msg in display_msgs:
-            if msg.role == Role.USER:
-                # User message with blue background - full width
-                user_content = Text(msg.content)
-                renderables.append(Panel(
-                    user_content,
-                    title=f"👤 {t('title_you')}",
-                    border_style="blue",
-                    padding=(0, 1),
-                ))
-            elif msg.role == Role.ASSISTANT:
-                # Assistant message with gray background and Markdown
-                renderables.append(Panel(
-                    Markdown(msg.content),
-                    title=f"🤖 {t('title_assistant')}",
-                    border_style="green",
-                    padding=(0, 1),
-                    expand=False,
-                ))
-            elif msg.role == Role.SYSTEM:
-                # System message - no circle prefix
-                renderables.append(Text(f"  {msg.content}", style="dim yellow"))
-            elif msg.role == Role.TOOL:
-                name = msg.name or "tool"
-                preview = msg.content[:500] + "..." if len(msg.content) > 500 else msg.content
-                lines = [f"{t('tool_result_prefix', name=name)}:"]
-                for line in preview.split("\n")[:10]:
-                    lines.append(f"  {line}")
-                renderables.append(Text("\n".join(lines), style="dim"))
-            # Add spacing between messages
-            renderables.append(Text(""))
-        
-        # Update with grouped renderables
-        self.update(Group(*renderables))
+    def __init__(self):
+        super().__init__()
+        self.update(build_welcome())
 
 
 class ChatView(ScrollableContainer):
-    """Scrollable container for chat messages."""
+    """Scrollable container for chat messages. Each message is clickable."""
 
-    messages: reactive[list] = reactive([])
+    messages: reactive[list] = reactive([], init=False)
+
+    DEFAULT_CSS = """
+    ChatView {
+        overflow-y: auto;
+        overflow-x: auto;
+        border: round $secondary;
+        height: 1fr;
+    }
+    """
 
     def compose(self):
-        self.chat_display = ChatMessages()
+        from textual.containers import Vertical
+        self.chat_display = Vertical()
         yield self.chat_display
 
-    def on_mount(self):
-        """Show welcome screen on startup."""
-        self.chat_display.add_class("welcome")
-        self.chat_display.update(build_welcome())
+    def _rebuild(self, messages: list[Message]):
+        """Rebuild all message widgets in the display container."""
+        self.chat_display.remove_children()
+
+        if not messages:
+            self.chat_display.mount(WelcomeWidget())
+            self.scroll_end(animate=False)
+            return
+
+        MAX_VISIBLE = 100
+        display_msgs = messages[-MAX_VISIBLE:] if len(messages) > MAX_VISIBLE else messages
+
+        if len(messages) > MAX_VISIBLE:
+            self.chat_display.mount(Static(
+                Text(f"  ... {len(messages) - MAX_VISIBLE} earlier messages hidden", style="dim")
+            ))
+
+        for msg in display_msgs:
+            self.chat_display.mount(MessageWidget(msg))
+
+        self.scroll_end(animate=False)
 
     def watch_messages(self, messages: list[Message]):
         """Called when messages reactive changes."""
-        self.chat_display.update_messages(messages)
-        self.call_after_refresh(self.scroll_end, animate=False)
+        self._rebuild(messages)
 
     def add_message(self, message: Message):
+        """Append a message and trigger reactivity."""
         self.messages = self.messages + [message]
+
+    def add_system_message(self, content: str):
+        """Add a system message directly without triggering full rebuild."""
+        widget = MessageWidget(Message(role=Role.SYSTEM, content=content))
+        self.chat_display.mount(widget)
+        self.scroll_end(animate=False)
+        return widget
+
+    def update_message_widget(self, predicate, make_message):
+        """Find the first MessageWidget matching predicate and update its content.
+        
+        Args:
+            predicate: callable(MessageWidget) -> bool
+            make_message: callable(MessageWidget) -> Message, returns updated message
+        """
+        for child in self.chat_display.children:
+            if isinstance(child, MessageWidget) and predicate(child):
+                new_msg = make_message(child)
+                child._msg = new_msg
+                child._build_renderable()
+                return
+        # Fallback: didn't find it, trigger full rebuild
+        self.messages = list(self.messages)

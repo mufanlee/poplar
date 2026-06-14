@@ -290,7 +290,7 @@ class PoplarApp(App):
         if text == "/help":
             self._show_help()
             return
-        if text == "/exit" or text == "/quit":
+        if text == "/quit":
             self.exit()
             return
         if text == "/compress":
@@ -770,7 +770,7 @@ class PoplarApp(App):
             "",
             "[bold]Help[/bold]",
             "  /help               — Show this help",
-            "  /exit, /quit        — Exit application",
+            "  /quit               — Exit application",
             "",
             "[dim]Type /help to see this again[/dim]",
         ]

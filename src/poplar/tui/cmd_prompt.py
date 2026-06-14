@@ -18,7 +18,6 @@ class CommandSelected(Message):
 
 _COMMANDS = [
     ("/help", "Show available commands"),
-    ("/exit", "Exit application"),
     ("/quit", "Exit application"),
     ("/context", "Show session context"),
     ("/compress", "Compress conversation"),

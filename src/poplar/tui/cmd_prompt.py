@@ -88,8 +88,10 @@ class CommandSuggestion(ModalScreen[str]):
 
     DEFAULT_CSS = """
     CommandSuggestion {
-        align: center bottom;
-        margin-bottom: 4;
+        align: left bottom;
+        margin-left: 1;
+        margin-bottom: 6;
+        height: auto;
     }
     #cmd-box {
         width: 42;

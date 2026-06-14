@@ -1,7 +1,7 @@
 """Chat message display widgets — each message with a copy button."""
 
 from textual.widgets import Static
-from textual.containers import ScrollableContainer, Horizontal
+from textual.containers import ScrollableContainer
 from textual.reactive import reactive
 from rich.align import Align
 from rich.text import Text
@@ -45,8 +45,8 @@ def build_welcome():
     return Align.center(panel)
 
 
-class MessageContent(Static):
-    """Renders the message body (Panel / Text)."""
+class MessageWidget(Static):
+    """A single chat message — clicking anywhere copies content."""
 
     def __init__(self, message: Message):
         super().__init__()
@@ -54,18 +54,25 @@ class MessageContent(Static):
         self._build()
 
     def _build(self):
+        """Render the message with 'copy' in the panel title."""
         msg = self._msg
         if msg.role == Role.USER:
+            title = Text()
+            title.append(f"👤 {t('title_you')} ")
+            title.append("[copy]", style="dim italic")
             self.update(Panel(
                 Text(msg.content),
-                title=f"👤 {t('title_you')}",
+                title=title,
                 border_style="blue",
                 padding=(0, 1),
             ))
         elif msg.role == Role.ASSISTANT:
+            title = Text()
+            title.append(f"🤖 {t('title_assistant')} ")
+            title.append("[copy]", style="dim italic")
             self.update(Panel(
                 Markdown(msg.content),
-                title=f"🤖 {t('title_assistant')}",
+                title=title,
                 border_style="green",
                 padding=(0, 1),
                 expand=False,
@@ -80,56 +87,20 @@ class MessageContent(Static):
                 lines.append(f"  {line}")
             self.update(Text("\n".join(lines), style="dim"))
 
-
-class CopyButton(Static):
-    """A small clickable copy button shown at top-right of each message."""
-
-    def __init__(self, parent_widget):
-        super().__init__("copy")
-        self._parent = parent_widget
-
     def on_click(self):
-        """Copy the parent message content to clipboard."""
-        content = self._parent._msg.content
+        """Click anywhere on the message to copy its content."""
+        content = self._msg.content
         if content:
             self.app.copy_to_clipboard(content)
             self.app.notify(f"📋 Copied: {content[:60]}...")
-
-    DEFAULT_CSS = """
-    CopyButton {
-        width: 6;
-        height: 1;
-        padding: 0 0 0 0;
-        text-align: center;
-        background: $surface-darken-2;
-    }
-    CopyButton:hover {
-        background: $accent;
-        color: $text;
-    }
-    """
-
-
-class MessageWidget(Static):
-    """A single chat message: Panel + copy button at top-right."""
-
-    def __init__(self, message: Message):
-        super().__init__()
-        self._msg = message
-
-    def compose(self):
-        with Horizontal():
-            yield MessageContent(self._msg)
-            yield CopyButton(self)
 
     DEFAULT_CSS = """
     MessageWidget {
         height: auto;
         margin: 0 0 0 0;
     }
-    MessageContent {
-        height: auto;
-        width: 1fr;
+    MessageWidget:hover {
+        background: $boost;
     }
     """
 
@@ -150,7 +121,7 @@ class WelcomeWidget(Static):
 
 
 class ChatView(ScrollableContainer):
-    """Scrollable container for chat messages. Each message has a copy button."""
+    """Scrollable container for chat messages."""
 
     messages: reactive[list] = reactive([], init=False)
 
@@ -216,10 +187,7 @@ class ChatView(ScrollableContainer):
             if isinstance(child, MessageWidget) and predicate(child):
                 new_msg = make_message(child)
                 child._msg = new_msg
-                # Update the MessageContent child
-                for sub in child.query(MessageContent):
-                    sub._msg = new_msg
-                    sub._build()
+                child._build()
                 return
         # Fallback: trigger full rebuild
         self.messages = list(self.messages)

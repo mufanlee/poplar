@@ -1,11 +1,11 @@
-from typing import Protocol, List, AsyncIterator, Iterator, Dict, Any
+from typing import Protocol, List, AsyncIterator, Iterator, Dict, Optional, Any
 from poplar.core.session import Message
 
 
 class ChatResponse:
-    def __init__(self, content: str, usage: dict = None):
-        self.content = content
-        self.usage = usage or {}
+    def __init__(self, content: str, usage: Optional[dict] = None):
+        self.content: str = content
+        self.usage: dict = usage or {}
 
 
 class ModelInfo:
@@ -23,7 +23,7 @@ class Provider(Protocol):
         """Stream response chunks."""
         ...
 
-    def stream_sync(self, messages: List[Message], tools: List[Dict[str, Any]] = None, **kwargs) -> Iterator[Dict[str, Any]]:
+    def stream_sync(self, messages: List[Message], tools: Optional[List[Dict[str, Any]]] = None, **kwargs) -> Iterator[Dict[str, Any]]:
         """Synchronous streaming with optional tool calling support.
         
         Yields dicts:

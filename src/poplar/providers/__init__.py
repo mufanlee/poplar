@@ -2,10 +2,11 @@
 
 import importlib
 import os
+from typing import Optional
 from poplar.providers.base import Provider
 
-# Registry: maps provider name → (module_path, class_name, env_var_for_api_key)
-PROVIDER_REGISTRY = {
+# Registry: maps provider name → config dict
+_PROVIDER_REGISTRY: dict = {
     "deepseek": {
         "module": "poplar.providers.deepseek",
         "class": "DeepSeekProvider",
@@ -35,10 +36,10 @@ PROVIDER_REGISTRY = {
 
 def get_available_providers() -> list[str]:
     """Return list of registered provider names."""
-    return list(PROVIDER_REGISTRY.keys())
+    return list(_PROVIDER_REGISTRY.keys())
 
 
-def create_provider(name: str, user_config: dict = None) -> Provider:
+def create_provider(name: str, user_config: Optional[dict] = None) -> Provider:
     """Create a provider instance by name.
 
     Args:
@@ -49,22 +50,23 @@ def create_provider(name: str, user_config: dict = None) -> Provider:
     Returns:
         A Provider instance matching the Provider Protocol.
     """
-    info = PROVIDER_REGISTRY.get(name)
+    info = _PROVIDER_REGISTRY.get(name)
     if not info:
-        raise ValueError(f"Unknown provider: {name}. Available: {list(PROVIDER_REGISTRY.keys())}")
+        raise ValueError(f"Unknown provider: {name}. Available: {list(_PROVIDER_REGISTRY.keys())}")
 
-    config = user_config or {}
+    config: dict = user_config or {}
 
     # API key: user_config > env var
-    api_key = config.get("api_key") or (os.getenv(info["env_key"]) if info["env_key"] else None)
-    model = config.get("model", info["default_model"])
-    base_url = config.get("base_url")
+    env_key: Optional[str] = info.get("env_key")  # type: ignore[assignment]
+    api_key: Optional[str] = config.get("api_key") or (os.getenv(env_key) if env_key else None)
+    model: str = config.get("model", info.get("default_model", ""))
+    base_url: Optional[str] = config.get("base_url")
 
-    module = importlib.import_module(info["module"])
-    cls = getattr(module, info["class"])
+    module = importlib.import_module(str(info["module"]))
+    cls = getattr(module, str(info["class"]))
 
-    kwargs = {"api_key": api_key, "model": model}
+    kwargs: dict = {"api_key": api_key, "model": model}
     if base_url:
         kwargs["base_url"] = base_url
 
-    return cls(**kwargs)
+    return cls(**kwargs)  # type: ignore[no-any-return,return-value]

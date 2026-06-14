@@ -59,7 +59,7 @@ class CacheManager:
     SQLite tier provides durability across restarts and higher capacity.
     """
 
-    def __init__(self, db_path: str = None, max_memory: int = 100):
+    def __init__(self, db_path: Optional[str] = None, max_memory: int = 100):
         self.db_path = db_path or get_cache_db_path()
         self.max_memory = max_memory
         self._memory: OrderedDict[str, CacheEntry] = OrderedDict()
@@ -118,7 +118,7 @@ class CacheManager:
         if row:
             expires_at = row[1]
             if now < expires_at:
-                value = row[0]
+                value: str = row[0]
                 self._put_memory(key, value, expires_at)
                 return value
             # Expired — remove from DB

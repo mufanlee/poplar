@@ -34,7 +34,7 @@ def get_db_path() -> str:
 class SessionStore:
     """Manages SQLite persistence for sessions and messages."""
 
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or get_db_path()
         self._init_db()
 
@@ -79,7 +79,7 @@ class SessionStore:
         finally:
             conn.close()
 
-    def create_session(self, session_id: str = None, title: str = "New Chat") -> Session:
+    def create_session(self, session_id: Optional[str] = None, title: str = "New Chat") -> Session:
         """Create a new session and persist it."""
         session_id = session_id or uuid.uuid4().hex[:12]
         now = datetime.now().isoformat()
@@ -158,7 +158,7 @@ class SessionStore:
                     title=row[1],
                     created_at=datetime.fromisoformat(row[2]),
                 )
-                session._message_count = count
+                session._message_count = count  # type: ignore[attr-defined]
                 sessions.append(session)
             return sessions
         finally:

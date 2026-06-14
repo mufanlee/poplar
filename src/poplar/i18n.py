@@ -219,7 +219,7 @@ def get_context_config() -> dict:
 def get_active_provider_name() -> str:
     """Get the active provider name from config."""
     config = load_config()
-    return config.get("provider", DEFAULT_PROVIDER)
+    return str(config.get("provider", DEFAULT_PROVIDER))
 
 
 def get_provider_config() -> dict:

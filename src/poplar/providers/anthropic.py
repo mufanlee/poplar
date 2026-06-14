@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import List, AsyncIterator, Iterator, Dict, Any
+from typing import Optional, List, AsyncIterator, Iterator, Dict, Any
 from poplar.providers.base import ChatResponse, ModelInfo
 from poplar.core.session import Message
 
@@ -10,7 +10,7 @@ from poplar.core.session import Message
 class AnthropicProvider:
     """Provider for Anthropic Claude models."""
 
-    def __init__(self, api_key: str, base_url: str = None, model: str = "claude-3-5-sonnet-20241022"):
+    def __init__(self, api_key: str, base_url: Optional[str] = None, model: str = "claude-3-5-sonnet-20241022"):
         self.api_key = api_key
         self.base_url = base_url
         self.model = model
@@ -78,7 +78,7 @@ class AnthropicProvider:
             async for text in stream.text_stream:
                 yield text
 
-    def stream_sync(self, messages: List[Message], tools: List[Dict] = None, **kwargs) -> Iterator[Dict[str, Any]]:
+    def stream_sync(self, messages: List[Message], tools: Optional[List[Dict[str, Any]]] = None, **kwargs) -> Iterator[Dict[str, Any]]:
         """Stream with optional tool calling support."""
         client = self._client()
         system, anthro_msgs = self._convert_messages(messages)

@@ -136,7 +136,7 @@ class ContextManager:
     @staticmethod
     def get_cumulative_token_count(session: Session) -> int:
         """Get the estimated token count for all messages in a session."""
-        # Exclude system/thinking messages for estimation
-        meaningful = [m for m in session.messages
+        messages = session.messages or []
+        meaningful = [m for m in messages
                       if m.role != Role.SYSTEM or m.content.startswith("[Summary")]
         return messages_token_count(meaningful)

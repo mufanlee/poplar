@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 
@@ -47,8 +47,8 @@ class Message:
 class Session:
     id: str
     title: str
-    messages: List[Message] = None
-    created_at: datetime = None
+    messages: Optional[List[Message]] = None
+    created_at: Optional[datetime] = None
 
     def __post_init__(self):
         if self.messages is None:
@@ -57,7 +57,11 @@ class Session:
             self.created_at = datetime.now()
 
     def add_message(self, message: Message):
+        if self.messages is None:
+            self.messages = []
         self.messages.append(message)
 
-    def get_messages_for_api(self) -> List[dict]:
+    def get_messages_for_api(self) -> list:
+        if self.messages is None:
+            return []
         return [msg.to_dict() for msg in self.messages]

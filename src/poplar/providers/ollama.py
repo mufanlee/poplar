@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import List, AsyncIterator, Iterator, Dict, Any
+from typing import Optional, List, AsyncIterator, Iterator, Dict, Any
 from poplar.providers.base import ChatResponse, ModelInfo
 from poplar.core.session import Message
 
@@ -10,7 +10,7 @@ from poplar.core.session import Message
 class OllamaProvider:
     """Provider for local Ollama models."""
 
-    def __init__(self, api_key: str = None, base_url: str = "http://localhost:11434", model: str = "llama3"):
+    def __init__(self, api_key: Optional[str] = None, base_url: str = "http://localhost:11434", model: str = "llama3"):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -57,7 +57,7 @@ class OllamaProvider:
                         if delta.get("content"):
                             yield delta["content"]
 
-    def stream_sync(self, messages: List[Message], tools: List[Dict] = None, **kwargs) -> Iterator[Dict[str, Any]]:
+    def stream_sync(self, messages: List[Message], tools: Optional[List[Dict[str, Any]]] = None, **kwargs) -> Iterator[Dict[str, Any]]:
         """Stream with optional tool calling support using Ollama's OpenAI-compatible endpoint."""
         import httpx
         api_messages = self._format_messages(messages)

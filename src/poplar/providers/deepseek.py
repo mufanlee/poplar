@@ -1,16 +1,16 @@
 import os
 import json
 import openai
-from typing import List, AsyncIterator, Iterator, Dict, Any
+from typing import Optional, List, AsyncIterator, Iterator, Dict, Any
 from poplar.providers.base import Provider, ChatResponse, ModelInfo
 from poplar.core.session import Message
 
 
 class DeepSeekProvider:
     def __init__(self, api_key: str, base_url: str = "https://api.deepseek.com/v1", model: str = "deepseek-chat"):
-        self.api_key = api_key
-        self.base_url = base_url
-        self.model = model
+        self.api_key: str = api_key
+        self.base_url: str = base_url
+        self.model: str = model
 
         for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']:
             os.environ.pop(var, None)
@@ -20,39 +20,32 @@ class DeepSeekProvider:
     def chat(self, messages: List[Message], **kwargs) -> ChatResponse:
         api_messages = [msg.to_dict() for msg in messages]
         response = self.client.chat.completions.create(
-            model=self.model, messages=api_messages, **kwargs
+            model=self.model, messages=api_messages, **kwargs  # type: ignore[arg-type]
         )
-        content = response.choices[0].message.content
+        content = response.choices[0].message.content or ""
         usage = {
-            "prompt_tokens": response.usage.prompt_tokens,
-            "completion_tokens": response.usage.completion_tokens,
-            "total_tokens": response.usage.total_tokens,
+            "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
+            "completion_tokens": response.usage.completion_tokens if response.usage else 0,
+            "total_tokens": response.usage.total_tokens if response.usage else 0,
         }
         return ChatResponse(content=content, usage=usage)
 
     async def stream(self, messages: List[Message], **kwargs) -> AsyncIterator[str]:
         api_messages = [msg.to_dict() for msg in messages]
         stream = self.client.chat.completions.create(
-            model=self.model, messages=api_messages, stream=True, **kwargs
+            model=self.model, messages=api_messages, stream=True, **kwargs  # type: ignore[arg-type]
         )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+        for chunk in stream:  # type: ignore[union-attr]
+            if chunk.choices[0].delta.content:  # type: ignore[union-attr]
+                yield chunk.choices[0].delta.content  # type: ignore[union-attr]
 
-    def stream_sync(self, messages: List[Message], tools: List[Dict] = None, **kwargs) -> Iterator[Dict[str, Any]]:
-        """Stream with optional tool calling support.
-        
-        Yields dicts:
-        - {"type": "content", "text": "..."}
-        - {"type": "tool_call", "id": "...", "name": "...", "arguments": "..."}
-        - {"type": "done"}
-        """
+    def stream_sync(self, messages: List[Message], tools: Optional[List[Dict[str, Any]]] = None, **kwargs) -> Iterator[Dict[str, Any]]:
+        """Stream with optional tool calling support."""
         api_messages = [msg.to_dict() for msg in messages]
-        params = dict(model=self.model, messages=api_messages, stream=True, **kwargs)
+        params: dict = dict(model=self.model, messages=api_messages, stream=True, **kwargs)
         if tools:
             params["tools"] = tools
-
-        stream = self.client.chat.completions.create(**params)
+        stream = self.client.chat.completions.create(**params)  # type: ignore[arg-type]
         tool_calls: Dict[int, Dict] = {}
 
         for chunk in stream:

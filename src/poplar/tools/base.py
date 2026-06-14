@@ -3,7 +3,7 @@
 import json
 import logging
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from poplar.persistence.cache import CacheManager, make_key
 from poplar.i18n import get_cache_config
@@ -19,7 +19,7 @@ class ToolResult:
 
 
 # Lazy-initialized cache manager
-_cache: CacheManager = None
+_cache: Optional[CacheManager] = None
 
 
 def _get_cache() -> CacheManager:
@@ -30,7 +30,7 @@ def _get_cache() -> CacheManager:
 
 
 def _cache_enabled() -> bool:
-    return get_cache_config().get("enabled", True)
+    return bool(get_cache_config().get("enabled", True))
 
 
 # Cache TTL config keys, keyed by tool name
@@ -125,7 +125,7 @@ def execute_tool(name: str, arguments: Dict[str, Any]) -> ToolResult:
         if cached is not None:
             logger.info("Tool cache hit: %s", cache_key)
             result = ToolResult(content=cached, success=True)
-            result._cached = True
+            result._cached = True  # type: ignore[attr-defined]
             return result
 
     # --- Execute ---

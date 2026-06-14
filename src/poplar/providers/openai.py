@@ -3,7 +3,7 @@
 import json
 import os
 import openai
-from typing import List, AsyncIterator, Iterator, Dict, Any
+from typing import Optional, List, AsyncIterator, Iterator, Dict, Any
 from poplar.providers.base import Provider, ChatResponse, ModelInfo
 from poplar.core.session import Message
 
@@ -24,7 +24,7 @@ class OpenAIProvider:
     def chat(self, messages: List[Message], **kwargs) -> ChatResponse:
         api_messages = [msg.to_dict() for msg in messages]
         response = self.client.chat.completions.create(
-            model=self.model, messages=api_messages, **kwargs
+            model=self.model, messages=api_messages, **kwargs  # type: ignore[arg-type]
         )
         content = response.choices[0].message.content
         usage = {}
@@ -39,20 +39,20 @@ class OpenAIProvider:
     async def stream(self, messages: List[Message], **kwargs) -> AsyncIterator[str]:
         api_messages = [msg.to_dict() for msg in messages]
         stream = self.client.chat.completions.create(
-            model=self.model, messages=api_messages, stream=True, **kwargs
+            model=self.model, messages=api_messages, stream=True, **kwargs  # type: ignore[arg-type]
         )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+        for chunk in stream:  # type: ignore[union-attr]
+            if chunk.choices[0].delta.content:  # type: ignore[union-attr]
+                yield chunk.choices[0].delta.content  # type: ignore[union-attr]
 
-    def stream_sync(self, messages: List[Message], tools: List[Dict] = None, **kwargs) -> Iterator[Dict[str, Any]]:
+    def stream_sync(self, messages: List[Message], tools: Optional[List[Dict[str, Any]]] = None, **kwargs) -> Iterator[Dict[str, Any]]:
         """Stream with optional tool calling support."""
         api_messages = [msg.to_dict() for msg in messages]
         params = dict(model=self.model, messages=api_messages, stream=True, **kwargs)
         if tools:
             params["tools"] = tools
 
-        stream = self.client.chat.completions.create(**params)
+        stream = self.client.chat.completions.create(**params)  # type: ignore[arg-type]
         tool_calls: Dict[int, Dict] = {}
 
         for chunk in stream:

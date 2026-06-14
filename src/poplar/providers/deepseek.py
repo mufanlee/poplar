@@ -11,11 +11,16 @@ class DeepSeekProvider:
         self.api_key: str = api_key
         self.base_url: str = base_url
         self.model: str = model
+        self._client = None
 
         for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']:
             os.environ.pop(var, None)
 
-        self.client = openai.OpenAI(api_key=api_key, base_url=base_url)
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = openai.OpenAI(api_key=self.api_key, base_url=self.base_url)
+        return self._client
 
     def chat(self, messages: List[Message], **kwargs) -> ChatResponse:
         api_messages = [msg.to_dict() for msg in messages]

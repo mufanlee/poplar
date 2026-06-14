@@ -11,7 +11,7 @@ from poplar.providers import create_provider, get_available_providers
 from poplar.i18n import t, get_cache_config, get_context_config, get_active_provider_name, get_provider_config
 from poplar.persistence.store import SessionStore
 from poplar.tools.base import TOOL_DEFINITIONS, execute_tool
-from poplar.persistence.cache import CacheManager, hash_messages
+from poplar.persistence.cache import CacheManager, hash_messages, get_shared_cache
 from poplar.core.context import ContextManager
 from poplar.core.stats import stats
 import os
@@ -430,7 +430,7 @@ class PoplarApp(App):
         max_turns = 3
 
         # Cache setup (only on first turn)
-        api_cache = CacheManager() if get_cache_config().get("enabled", True) else None
+        api_cache = get_shared_cache() if get_cache_config().get("enabled", True) else None
         api_cache_key = None
         api_cache_ttl = get_cache_config().get("api_response_ttl", 3600)
 

@@ -36,7 +36,9 @@ def make_key(*parts: str) -> str:
 def hash_messages(messages: list) -> str:
     """Deterministic hash of a message list for API cache keying."""
     raw = json.dumps(
-        [{"role": m.role.value, "content": m.content} for m in messages],
+        [{"role": m.role.value, "content": m.content,
+          "tool_calls": m.tool_calls, "name": m.name}
+         for m in messages],
         sort_keys=True,
     )
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
@@ -59,9 +61,9 @@ class CacheManager:
     SQLite tier provides durability across restarts and higher capacity.
     """
 
-    def __init__(self, db_path: Optional[str] = None, max_memory: int = 100):
+    def __init__(self, db_path: Optional[str] = None, max_memory: Optional[int] = None):
         self.db_path = db_path or get_cache_db_path()
-        self.max_memory = max_memory
+        self.max_memory = max_memory or 100
         self._memory: OrderedDict[str, CacheEntry] = OrderedDict()
         self._init_table()
 
@@ -220,3 +222,17 @@ class CacheManager:
             return row[0] if row else 0
         finally:
             conn.close()
+
+
+# Singleton — shared by app.py and tools/base.py
+_cache_singleton: Optional[CacheManager] = None
+
+
+def get_shared_cache() -> CacheManager:
+    """Get the global CacheManager singleton, creating it on first use."""
+    global _cache_singleton
+    if _cache_singleton is None:
+        from poplar.i18n import get_cache_config
+        cfg = get_cache_config()
+        _cache_singleton = CacheManager(max_memory=cfg.get("max_memory_items", 100))
+    return _cache_singleton

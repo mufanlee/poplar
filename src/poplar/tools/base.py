@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
-from poplar.persistence.cache import CacheManager, make_key
+from poplar.persistence.cache import CacheManager, make_key, get_shared_cache
 from poplar.i18n import get_cache_config
 
 logger = logging.getLogger(__name__)
@@ -18,15 +18,9 @@ class ToolResult:
     success: bool = True
 
 
-# Lazy-initialized cache manager
-_cache: Optional[CacheManager] = None
-
-
+# Use shared cache singleton (shared with app.py)
 def _get_cache() -> CacheManager:
-    global _cache
-    if _cache is None:
-        _cache = CacheManager()
-    return _cache
+    return get_shared_cache()
 
 
 def _cache_enabled() -> bool:
@@ -41,7 +35,19 @@ _TOOL_CACHE_CONFIG = {
 
 
 def _tool_cache_key(name: str, arguments: Dict[str, Any]) -> str:
-    return make_key("tool", name, json.dumps(arguments, sort_keys=True))
+    """Build a deterministic cache key from tool name and arguments.
+    
+    Paths in read_file/list_directory arguments are normalized to
+    absolute paths for consistent cache keys.
+    """
+    normalized = dict(arguments)
+    if name in ("read_file", "list_directory", "write_file") and "path" in normalized:
+        from pathlib import Path
+        p = Path(normalized["path"])
+        if not p.is_absolute():
+            p = Path.cwd() / p
+        normalized["path"] = str(p.resolve())
+    return make_key("tool", name, json.dumps(normalized, sort_keys=True))
 
 
 TOOL_DEFINITIONS = [

@@ -13,6 +13,7 @@ from poplar.persistence.store import SessionStore
 from poplar.tools.base import TOOL_DEFINITIONS, execute_tool
 from poplar.persistence.cache import CacheManager, hash_messages
 from poplar.core.context import ContextManager
+from poplar.core.stats import stats
 import os
 import json
 import logging
@@ -292,6 +293,9 @@ class PoplarApp(App):
         if text == "/context":
             self._show_context_info()
             return
+        if text == "/stats":
+            self._show_stats()
+            return
         if text.startswith("/provider"):
             self._handle_provider_command(text)
             return
@@ -323,6 +327,7 @@ class PoplarApp(App):
         # 1. Immediately display user message
         user_msg = Message(role=Role.USER, content=event.text)
         self.session.add_message(user_msg)
+        stats.record_user_message()
         self.store.save_message(self.session.id, user_msg)
         chat_view = self.query_one(ChatView)
         chat_view.add_message(user_msg)
@@ -428,6 +433,8 @@ class PoplarApp(App):
             tool_calls = []
             last_error = None
 
+            stats.start_api_call()
+
             # Check API cache on first turn
             if turn == 0 and api_cache:
                 api_messages = self._get_api_messages()
@@ -435,6 +442,7 @@ class PoplarApp(App):
                 cached = api_cache.get(api_cache_key)
                 if cached is not None:
                     logger.info("API cache hit for %s", api_cache_key)
+                    stats.record_cache_hit()
                     self.call_from_thread(self._stop_spinner)
                     if not worker.is_cancelled:
                         self.call_from_thread(self._finalize_streaming, cached)
@@ -508,6 +516,7 @@ class PoplarApp(App):
                     except json.JSONDecodeError:
                         args = {}
                     result = execute_tool(name, args)
+                    stats.record_tool_call()
                     # Visual marker for cached tool results
                     display_content = f"[dim][cached][/dim] {result.content}" if getattr(result, '_cached', False) else result.content
                     tool_msg = Message(
@@ -587,6 +596,8 @@ class PoplarApp(App):
         self.store.save_message(self.session.id, assistant_msg)
         self._message_count += 1
         self._total_tokens += max(1, len(content) // 3)
+        stats.record_assistant_message()
+        stats.record_api_success(completion_tokens=len(content) // 3)
         self._streaming_msg = None
 
         # Sync chat view with session (rebuilds all widgets from session.messages)
@@ -718,6 +729,13 @@ class PoplarApp(App):
         ]
 
         msg = Message(role=Role.SYSTEM, content="\n".join(lines))
+        chat_view = self.query_one(ChatView)
+        chat_view.add_message(msg)
+        chat_view.scroll_end(animate=False)
+
+    def _show_stats(self):
+        """Show performance statistics."""
+        msg = Message(role=Role.SYSTEM, content=stats.report())
         chat_view = self.query_one(ChatView)
         chat_view.add_message(msg)
         chat_view.scroll_end(animate=False)
@@ -854,6 +872,7 @@ class PoplarApp(App):
     def _show_error(self, error: str):
         """Called on main thread when API call fails."""
         logger.error("Displaying error: %s", error[:100] if len(error) > 100 else error)
+        stats.record_api_error()
         self._stop_spinner()
         chat_view = self.query_one(ChatView)
 

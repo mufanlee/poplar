@@ -287,6 +287,9 @@ class PoplarApp(App):
         text = event.text.strip()
 
         # Handle /commands
+        if text == "/help":
+            self._show_help()
+            return
         if text == "/compress":
             self._compress_conversation()
             return
@@ -304,6 +307,9 @@ class PoplarApp(App):
             return
         if text.startswith("/import"):
             self._import_session(text)
+            return
+        if text.startswith("/"):
+            self._show_unknown_command(text)
             return
         # If a response is streaming, queue this message for later
         if self._streaming:
@@ -736,6 +742,47 @@ class PoplarApp(App):
     def _show_stats(self):
         """Show performance statistics."""
         msg = Message(role=Role.SYSTEM, content=stats.report())
+        chat_view = self.query_one(ChatView)
+        chat_view.add_message(msg)
+        chat_view.scroll_end(animate=False)
+
+    def _show_help(self):
+        """Show all available commands."""
+        lines = [
+            "[bold]Available Commands[/bold]",
+            "",
+            "[bold]Session[/bold]",
+            "  /context            — Show session context info",
+            "  /compress           — Compress conversation via LLM summarization",
+            "  /export <path>      — Export session to JSON file",
+            "  /import <path>      — Import session from JSON file",
+            "",
+            "[bold]Provider[/bold]",
+            "  /provider           — Show current provider",
+            "  /provider list      — List available providers",
+            "  /provider set <name> — Switch provider (deepseek/openai/anthropic/ollama)",
+            "",
+            "[bold]Stats[/bold]",
+            "  /stats              — Show performance statistics",
+            "",
+            "[bold]Help[/bold]",
+            "  /help               — Show this help",
+            "",
+            "[dim]Type /help to see this again[/dim]",
+        ]
+        msg = Message(role=Role.SYSTEM, content="\n".join(lines))
+        chat_view = self.query_one(ChatView)
+        chat_view.add_message(msg)
+        chat_view.scroll_end(animate=False)
+
+    def _show_unknown_command(self, text: str):
+        """Show help when an unknown command is typed."""
+        lines = [
+            f"[red]Unknown command: {text.split()[0]}[/red]",
+            "",
+            "Try [bold]/help[/bold] to see available commands.",
+        ]
+        msg = Message(role=Role.SYSTEM, content="\n".join(lines))
         chat_view = self.query_one(ChatView)
         chat_view.add_message(msg)
         chat_view.scroll_end(animate=False)

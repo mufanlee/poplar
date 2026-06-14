@@ -13,7 +13,7 @@ class ComposerSubmit(Message):
 
 
 class Composer(Widget):
-    """Multi-line input field. Enter=send, Alt+Enter=newline. Typing '/' shows command suggestions."""
+    """Multi-line input field. Enter=send, Ctrl+Enter=newline. Typing '/' shows command suggestions."""
 
     BINDINGS = [
         Binding("enter", "send", "Send", show=False, priority=True),
@@ -27,30 +27,36 @@ class Composer(Widget):
         textarea.show_line_numbers = False
         textarea.tab_behavior = "focus"
         textarea.border_title = t("composer_placeholder")
-        self._suggesting = False
 
     def on_text_area_changed(self, event: TextArea.Changed):
-        """Show command suggestions when '/' is typed at start of line."""
-        if self._suggesting:
-            return
+        """Show or hide command suggestions when '/' is typed."""
         text = event.text_area.text.strip()
-        if text.startswith("/") and len(text) <= 2:
-            self._suggesting = True
-            app = self.app
-            if app and hasattr(app, 'push_screen'):
-                app.push_screen(CommandSuggestion(text), self._on_command_selected)
+        app = self.app
+        if not app:
+            return
+        try:
+            suggest = app.query_one("#cmd-suggest", CommandSuggestion)
+        except Exception:
+            return
 
-    def _on_command_selected(self, cmd: str | None):
-        """Handle command selection from suggestion popup."""
-        self._suggesting = False
-        if cmd:
-            textarea = self.query_one(TextArea)
-            textarea.text = cmd + " "
-            textarea.focus()
+        if text.startswith("/") and len(text) <= 2:
+            suggest.show(text)
+        else:
+            suggest.hide()
 
     def on_key(self, event):
         if event.key == "enter":
             event.stop()
+            # During Enter, if popup is visible, let popup handle it
+            app = self.app
+            if app:
+                try:
+                    suggest = app.query_one("#cmd-suggest", CommandSuggestion)
+                    if suggest._visible:
+                        suggest.action_select()
+                        return
+                except Exception:
+                    pass
             if event.ctrl:
                 self.query_one(TextArea).insert("\n")
             else:

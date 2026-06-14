@@ -1,53 +1,71 @@
-"""Command suggestion popup for slash commands."""
+"""Command suggestion popup for slash commands — mounted as widget above composer."""
 
 from textual.widgets import Static
 from textual.binding import Binding
-from textual.screen import ModalScreen
 from textual.containers import Vertical
+from textual.message import Message
 
 
-_COMMANDS = [
-    ("/help", "Show available commands"),
-    ("/quit", "Exit application"),
-    ("/context", "Show session context"),
-    ("/compress", "Compress conversation"),
-    ("/stats", "Performance statistics"),
-    ("/export ", "Export session to JSON"),
-    ("/import ", "Import session from JSON"),
-    ("/provider", "Show current provider"),
-    ("/provider list", "List all providers"),
-    ("/provider set ", "Switch provider"),
-]
+class CommandSelected(Message):
+    """Posted when user selects a command from the suggestion list."""
+
+    def __init__(self, command: str):
+        self.command = command
+        super().__init__()
 
 
-class CommandSuggestion(ModalScreen[str]):
-    """Popup screen showing slash command suggestions."""
+class CommandSuggestion(Vertical):
+    """Slash command suggestion popup, shown above the composer."""
 
     BINDINGS = [
-        Binding("escape", "dismiss_none", "Cancel", show=False, priority=True),
+        Binding("escape", "dismiss", "Cancel", show=False, priority=True),
         Binding("tab", "select", "Complete", show=False, priority=True),
-        Binding("enter", "select", "Complete", show=False, priority=True),
         Binding("up", "nav_up", "", show=False, priority=True),
         Binding("down", "nav_down", "", show=False, priority=True),
     ]
 
-    def __init__(self, filter_text: str):
-        super().__init__()
-        self._filter = filter_text.lower()
+    _COMMANDS = [
+        ("/help", "Show available commands"),
+        ("/quit", "Exit application"),
+        ("/context", "Show session context"),
+        ("/compress", "Compress conversation"),
+        ("/stats", "Performance statistics"),
+        ("/export ", "Export session to JSON"),
+        ("/import ", "Import session from JSON"),
+        ("/provider", "Show current provider"),
+        ("/provider list", "List all providers"),
+        ("/provider set ", "Switch provider"),
+    ]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._filter = ""
         self._index = 0
+        self._visible = False
+        self.display = False
 
     def compose(self):
-        with Vertical(id="cmd-box"):
-            yield Static(" Commands ", id="cmd-title")
-            yield Static(id="cmd-list")
+        yield Static(" Commands ", id="cmd-title")
+        yield Static(id="cmd-list")
 
-    def on_mount(self):
+    def show(self, filter_text: str):
+        """Show the command popup with the given filter."""
+        self._filter = filter_text.lower()
+        self._index = 0
+        self._visible = True
+        self.styles.display = "block"
         self._render_list()
 
-    def _matching(self):
-        return [(c, d) for c, d in _COMMANDS if self._filter in c.lower()]
+    def hide(self):
+        """Hide the popup."""
+        self._visible = False
+        self.styles.display = "none"
+        self._filter = ""
+        self._index = 0
 
-    @property
+    def _matching(self):
+        return [(c, d) for c, d in self._COMMANDS if self._filter in c.lower()]
+
     def _selected(self):
         items = self._matching()
         if not items:
@@ -59,7 +77,6 @@ class CommandSuggestion(ModalScreen[str]):
         if not items:
             self.query_one("#cmd-list").update("[dim]No matching commands[/dim]")
             return
-
         lines = []
         for i, (cmd, desc) in enumerate(items):
             prefix = "●" if i == (self._index % len(items)) else " "
@@ -79,27 +96,24 @@ class CommandSuggestion(ModalScreen[str]):
             self._render_list()
 
     def action_select(self):
-        cmd, _ = self._selected
+        cmd, _ = self._selected()
         if cmd:
-            self.dismiss(cmd)
+            self.post_message(CommandSelected(cmd))
+            self.hide()
 
-    def action_dismiss_none(self):
-        self.dismiss(None)
+    def action_dismiss(self):
+        self.hide()
 
     DEFAULT_CSS = """
     CommandSuggestion {
-        align: left bottom;
-        margin-left: 1;
-        margin-bottom: 3;
-        height: auto;
-    }
-    #cmd-box {
-        width: 42;
         height: auto;
         max-height: 14;
+        width: 42;
+        margin: 0 0 0 1;
         background: $surface;
         border: solid $secondary;
         padding: 0 1;
+        display: none;
     }
     #cmd-title {
         background: $primary-darken-2;

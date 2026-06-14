@@ -1,11 +1,12 @@
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
-from textual.widgets import Footer, Header, Static
+from textual.widgets import Footer, Header, Static, TextArea
 from textual.worker import Worker, get_current_worker
 from poplar.tui.chat_view import ChatView, MessageWidget
 from poplar.tui.composer import Composer, ComposerSubmit
 from poplar.tui.session_picker import SessionPicker
+from poplar.tui.cmd_prompt import CommandSuggestion, CommandSelected
 from poplar.core.session import Session, Message, Role
 from poplar.providers import create_provider, get_available_providers
 from poplar.i18n import t, get_cache_config, get_context_config, get_active_provider_name, get_provider_config
@@ -176,6 +177,7 @@ class PoplarApp(App):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield ChatView(id="chat")
+        yield CommandSuggestion(id="cmd-suggest")
         yield Composer(id="composer")
         yield StatusFooter(self)
         yield Footer()
@@ -183,6 +185,13 @@ class PoplarApp(App):
     def on_mount(self):
         """Called when the app is mounted."""
         self._load_session_messages()
+
+    def on_command_selected(self, event: CommandSelected):
+        """Handle command selection from suggestion popup."""
+        composer = self.query_one(Composer)
+        textarea = composer.query_one("#input", TextArea)
+        textarea.text = event.command + " "  # type: ignore[assignment]
+        textarea.focus()
 
     def _load_session_messages(self):
         """Load current session messages into ChatView."""

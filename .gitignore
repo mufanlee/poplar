@@ -27,3 +27,6 @@ Thumbs.db
 
 # Project specific
 poplar.log
+.coverage
+.poplar/
+.reasonix/

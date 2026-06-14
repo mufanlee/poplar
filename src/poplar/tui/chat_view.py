@@ -118,9 +118,6 @@ class ChatView(ScrollableContainer):
     }
     """
 
-    def compose(self):
-        """No fixed children — widgets are mounted dynamically in _rebuild."""
-        pass
 
     def _rebuild(self, messages: list[Message]):
         """Rebuild all message widgets (mounted directly to this ScrollableContainer)."""

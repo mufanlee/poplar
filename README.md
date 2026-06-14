@@ -11,24 +11,32 @@ Poplar (杨树) is a terminal-based AI chat application built with Python and Te
 ### Core Features
 - **Rich TUI Interface**: Built with Textual framework, featuring rounded borders, themed scrollbars, and message bubbles
 - **DeepSeek Integration**: Connect to DeepSeek API for AI-powered conversations
+- **Streaming Responses**: Token-by-token real-time display of AI responses
+- **Tool Execution**: Built-in tools for file read/write, directory listing, and shell commands — multi-turn automatic execution
+- **Multi-Session Management**: Create, switch, delete, and rename sessions (Ctrl+S)
+- **SQLite Persistence**: Conversations survive application restart
 - **Markdown Rendering**: Assistant responses support Markdown formatting
-- **Real-time Animation**: Spinner animation with elapsed time display during API calls
+- **Multi-line Input**: TextArea with Ctrl+Enter for new lines
+- **Message Queuing**: Continue typing while waiting — messages auto-send after response
 - **Request Cancellation**: Press ESC to cancel ongoing API requests
+- **API Retry**: Automatic retry with exponential backoff on failures
+- **Copy Response**: Ctrl+C to copy the last assistant response
 - **Internationalization**: Support for English and Chinese languages
-- **Configuration Management**: YAML-based configuration file with model selection
+- **Configuration Management**: YAML-based configuration file with model and language settings
 
 ### UI Components
 - **Header**: Displays application title "🌳 Poplar" and clock
 - **ChatView**: Scrollable message display area with message bubbles
-- **Composer**: User input field with placeholder text
+- **Composer**: Multi-line input using TextArea (Enter to send, Ctrl+Enter for new line)
 - **StatusFooter**: Shows model name, token count, and message count
 - **Footer**: Displays keyboard shortcuts
 - **Welcome Screen**: Centered welcome message with quick start guide
+- **Session Picker**: Modal dialog for managing multiple sessions (Ctrl+S)
 
 ## Phases
 
-- **Phase 1 (MVP)**: Basic chat with DeepSeek integration
-- **Phase 2 (Feature-Complete)**: Tools, sub-agents, persistence
+- **Phase 1 (MVP)**: Basic chat with DeepSeek integration ✅
+- **Phase 2 (Feature-Complete)**: Tools, streaming, persistence, multi-session ✅
 - **Phase 3 (Production-Ready)**: Plugins, multi-provider, advanced features
 
 ## Quick Start (Phase 1 - MVP)
@@ -73,6 +81,9 @@ python -m poplar.main
 ### Keyboard Shortcuts
 
 - `Enter` - Send message
+- `Ctrl+Enter` - New line in input
+- `Ctrl+S` - Open session picker (switch/create/delete/rename sessions)
+- `Ctrl+C` - Copy last assistant response
 - `Ctrl+Q` - Quit application
 - `ESC` - Cancel ongoing API request
 

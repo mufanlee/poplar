@@ -57,6 +57,8 @@ class ChatMessages(Static):
     }
     """
 
+    MAX_VISIBLE = 100
+
     def update_messages(self, messages: list[Message]):
         if not messages:
             self.add_class("welcome")
@@ -64,11 +66,15 @@ class ChatMessages(Static):
             return
 
         self.remove_class("welcome")
-        
-        # Build a list of renderables
+        display_msgs = messages[-self.MAX_VISIBLE:] if len(messages) > self.MAX_VISIBLE else messages
         renderables = []
+
+        if len(messages) > self.MAX_VISIBLE:
+            renderables.append(Text(
+                f"  [dim]... {len(messages) - self.MAX_VISIBLE} earlier messages hidden[/dim]\n"
+            ))
         
-        for msg in messages:
+        for msg in display_msgs:
             if msg.role == Role.USER:
                 # User message with blue background - full width
                 user_content = Text(msg.content)
@@ -90,7 +96,13 @@ class ChatMessages(Static):
             elif msg.role == Role.SYSTEM:
                 # System message - no circle prefix
                 renderables.append(Text(f"  {msg.content}", style="dim yellow"))
-            
+            elif msg.role == Role.TOOL:
+                name = msg.name or "tool"
+                preview = msg.content[:500] + "..." if len(msg.content) > 500 else msg.content
+                lines = [f"{t('tool_result_prefix', name=name)}:"]
+                for line in preview.split("\n")[:10]:
+                    lines.append(f"  {line}")
+                renderables.append(Text("\n".join(lines), style="dim"))
             # Add spacing between messages
             renderables.append(Text(""))
         
@@ -115,7 +127,7 @@ class ChatView(ScrollableContainer):
     def watch_messages(self, messages: list[Message]):
         """Called when messages reactive changes."""
         self.chat_display.update_messages(messages)
-        self.scroll_end(animate=False)
+        self.call_after_refresh(self.scroll_end, animate=False)
 
     def add_message(self, message: Message):
         self.messages = self.messages + [message]

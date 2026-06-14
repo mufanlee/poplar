@@ -45,10 +45,24 @@ TRANSLATIONS = {
         
         # Composer
         "composer_placeholder": "Type your message...",
+        "input_placeholder": "Type your message... (Enter to send, Shift+Enter for new line)",
         
         # Titles
         "title_you": "You",
         "title_assistant": "Assistant",
+
+        # Session picker
+        "picker_hint": "↑↓:nav Enter:switch N:new D:del R:rename Esc:close",
+        "new_chat": "New Chat",
+
+        # Actions
+        "copied": "Copied to clipboard",
+        "no_response": "No response to copy",
+        "session_cleared": "Last session cleared",
+        "session_deleted": "Session deleted",
+
+        # Tool results
+        "tool_result_prefix": "🔧 {name}",
     },
     "zh": {
         # Welcome screen
@@ -86,10 +100,24 @@ TRANSLATIONS = {
         
         # Composer
         "composer_placeholder": "输入你的消息...",
+        "input_placeholder": "输入你的消息...（Enter 发送，Shift+Enter 换行）",
         
         # Titles
         "title_you": "你",
         "title_assistant": "助手",
+
+        # Session picker
+        "picker_hint": "↑↓:导航 Enter:切换 N:新建 D:删除 R:重命名 Esc:关闭",
+        "new_chat": "新会话",
+
+        # Actions
+        "copied": "已复制到剪贴板",
+        "no_response": "没有可复制的内容",
+        "session_cleared": "会话已清空",
+        "session_deleted": "会话已删除",
+
+        # Tool results
+        "tool_result_prefix": "🔧 {name}",
     }
 }
 

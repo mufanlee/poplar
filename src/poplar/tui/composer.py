@@ -1,26 +1,53 @@
 from textual.widget import Widget
-from textual.widgets import Input
+from textual.widgets import TextArea
+from textual.binding import Binding
 from textual.message import Message
 from poplar.i18n import t
 
 
 class ComposerSubmit(Message):
-    """Message sent when user submits input."""
     def __init__(self, text: str):
         self.text = text
         super().__init__()
 
 
 class Composer(Widget):
-    """Input field for user messages."""
+    """Multi-line input field. Enter=send, Alt+Enter=newline."""
+
+    BINDINGS = [
+        Binding("enter", "send", "Send", show=False, priority=True),
+    ]
 
     def compose(self):
-        yield Input(placeholder=t("composer_placeholder"), id="input")
+        yield TextArea(id="input")
 
-    def on_input_submitted(self, event: Input.Submitted):
-        """Handle Enter key - send message."""
-        text = event.value
-        if text.strip():
+    def on_mount(self):
+        textarea = self.query_one(TextArea)
+        textarea.show_line_numbers = False
+        textarea.tab_behavior = "focus"
+        textarea.border_title = t("composer_placeholder")
+
+    def on_key(self, event):
+        if event.key == "enter":
+            event.stop()
+            if event.ctrl:
+                self.query_one(TextArea).insert("\n")
+            else:
+                self.action_send()
+        elif event.key == "ctrl+j":
+            event.stop()
+            self.query_one(TextArea).insert("\n")
+
+    def action_send(self):
+        textarea = self.query_one(TextArea)
+        text = textarea.text.strip()
+        if text:
             self.post_message(ComposerSubmit(text=text))
-            # Clear the input
-            self.query_one(Input).value = ""
+            textarea.clear()
+
+    DEFAULT_CSS = """
+    Composer TextArea {
+        height: auto;
+        min-height: 1;
+    }
+    """

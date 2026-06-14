@@ -1,6 +1,6 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from enum import Enum
-from typing import List
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 
@@ -8,19 +8,39 @@ class Role(str, Enum):
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
+    TOOL = "tool"
 
 
 @dataclass
 class Message:
     role: Role
-    content: str
+    content: str = ""
+    tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_call_id: Optional[str] = None
+    name: Optional[str] = None
 
     def to_dict(self) -> dict:
-        return {"role": self.role.value, "content": self.content}
+        d: dict = {"role": self.role.value}
+        if self.tool_calls:
+            d["tool_calls"] = self.tool_calls
+            d["content"] = self.content or None
+        else:
+            d["content"] = self.content or ""
+        if self.tool_call_id or self.role == Role.TOOL:
+            d["tool_call_id"] = self.tool_call_id or ""
+        if self.name:
+            d["name"] = self.name
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "Message":
-        return cls(role=Role(data["role"]), content=data["content"])
+        return cls(
+            role=Role(data["role"]),
+            content=data.get("content", ""),
+            tool_calls=data.get("tool_calls"),
+            tool_call_id=data.get("tool_call_id"),
+            name=data.get("name"),
+        )
 
 
 @dataclass

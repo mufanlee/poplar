@@ -1,6 +1,6 @@
 # Poplar — AI Agent TUI
 
-Terminal-based AI chat application built with Python and Textual framework, integrating DeepSeek API with tool execution, multi-session management, and i18n support.
+Terminal-based AI chat application built with Python and Textual framework, integrating multiple AI providers (DeepSeek, OpenAI, Anthropic, Ollama) with tool execution, multi-session management, caching, context compression, and i18n support.
 
 ## Project
 
@@ -33,8 +33,12 @@ src/poplar/
 ├── persistence/
 │   └── store.py            # SessionStore: SQLite CRUD for sessions + messages + tool_calls
 ├── providers/
+│   ├── __init__.py         # Provider registry + create_provider() factory
 │   ├── base.py             # Provider Protocol (structural typing), ChatResponse, ModelInfo
-│   └── deepseek.py         # DeepSeekProvider: chat(), stream(), stream_sync(), get_models()
+│   ├── deepseek.py         # DeepSeekProvider: chat(), stream(), stream_sync(), get_models()
+│   ├── openai.py           # OpenAIProvider (same pattern)
+│   ├── anthropic.py        # AnthropicProvider (native tool_use)
+│   └── ollama.py           # OllamaProvider (local, httpx-based)
 ├── tools/
 │   ├── base.py             # ToolResult dataclass, TOOL_DEFINITIONS (OpenAI tool schema), execute_tool()
 │   └── builtin.py          # Implementations: read_file, write_file, list_directory, run_command

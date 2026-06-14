@@ -384,7 +384,7 @@ class PoplarApp(App):
             cancel_msg = Message(role=Role.SYSTEM, content=t("request_cancelled"))
             self.session.add_message(cancel_msg)
             w = MessageWidget(cancel_msg)
-            chat_view.chat_display.mount(w)
+            chat_view.mount(w)
             
             self._streaming = False
             self._pending_count = 0
@@ -533,7 +533,7 @@ class PoplarApp(App):
         preview = content[:500] + "..." if len(content) > 500 else content
         tool_msg = Message(role=Role.SYSTEM, content=f"{t('tool_result_prefix', name=name)}\n{preview}")
         w = MessageWidget(tool_msg)
-        chat_view.chat_display.mount(w)
+        chat_view.mount(w)
         chat_view.scroll_end(animate=False)
 
     def _update_streaming(self, content: str):
@@ -545,14 +545,14 @@ class PoplarApp(App):
             self.session.messages = [m for m in self.session.messages if not self._is_thinking_msg(m)]
 
             # Remove thinking message widget
-            for child in list(chat_view.chat_display.children):
+            for child in list(chat_view.children):
                 if isinstance(child, MessageWidget) and self._is_thinking_msg(child._msg):
                     child.remove()
 
             self._streaming_msg = Message(role=Role.ASSISTANT, content=content)
             # Mount streaming widget
             w = MessageWidget(self._streaming_msg)
-            chat_view.chat_display.mount(w)
+            chat_view.mount(w)
         else:
             # Update existing widget or mount new one
             if self._streaming_msg is not None:
@@ -564,7 +564,7 @@ class PoplarApp(App):
             else:
                 self._streaming_msg = Message(role=Role.ASSISTANT, content=content)
                 w = MessageWidget(self._streaming_msg)
-                chat_view.chat_display.mount(w)
+                chat_view.mount(w)
 
         chat_view.scroll_end(animate=False)
 
@@ -724,7 +724,7 @@ class PoplarApp(App):
         chat_view = self.query_one(ChatView)
 
         # Remove thinking message widgets
-        for child in list(chat_view.chat_display.children):
+        for child in list(chat_view.children):
             if isinstance(child, MessageWidget) and self._is_thinking_msg(child._msg):
                 child.remove()
 

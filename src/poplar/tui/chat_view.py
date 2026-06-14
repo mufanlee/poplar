@@ -135,16 +135,15 @@ class ChatView(ScrollableContainer):
     """
 
     def compose(self):
-        from textual.containers import Vertical
-        self.chat_display = Vertical()
-        yield self.chat_display
+        """No fixed children — widgets are mounted dynamically in _rebuild."""
+        pass
 
     def _rebuild(self, messages: list[Message]):
-        """Rebuild all message widgets in the display container."""
-        self.chat_display.remove_children()
+        """Rebuild all message widgets (mounted directly to this ScrollableContainer)."""
+        self.remove_children()
 
         if not messages:
-            self.chat_display.mount(WelcomeWidget())
+            self.mount(WelcomeWidget())
             self.scroll_end(animate=False)
             return
 
@@ -152,12 +151,12 @@ class ChatView(ScrollableContainer):
         display_msgs = messages[-MAX_VISIBLE:] if len(messages) > MAX_VISIBLE else messages
 
         if len(messages) > MAX_VISIBLE:
-            self.chat_display.mount(Static(
+            self.mount(Static(
                 Text(f"  ... {len(messages) - MAX_VISIBLE} earlier messages hidden", style="dim")
             ))
 
         for msg in display_msgs:
-            self.chat_display.mount(MessageWidget(msg))
+            self.mount(MessageWidget(msg))
 
         self.scroll_end(animate=False)
 
@@ -172,7 +171,7 @@ class ChatView(ScrollableContainer):
     def add_system_message(self, content: str):
         """Add a system message directly without triggering full rebuild."""
         widget = MessageWidget(Message(role=Role.SYSTEM, content=content))
-        self.chat_display.mount(widget)
+        self.mount(widget)
         self.scroll_end(animate=False)
         return widget
 
@@ -183,7 +182,7 @@ class ChatView(ScrollableContainer):
             predicate: callable(MessageWidget) -> bool
             make_message: callable(MessageWidget) -> Message, returns updated message
         """
-        for child in self.chat_display.children:
+        for child in self.children:
             if isinstance(child, MessageWidget) and predicate(child):
                 new_msg = make_message(child)
                 child._msg = new_msg

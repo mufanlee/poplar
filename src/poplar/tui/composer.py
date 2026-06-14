@@ -48,12 +48,26 @@ class Composer(Widget):
         textarea.focus()
 
     def on_key(self, event):
-        if event.key == "enter":
-            event.stop()
-            suggest = self.query_one(CommandSuggestion)
-            if suggest._visible:
+        suggest = self.query_one(CommandSuggestion)
+        if suggest._visible:
+            if event.key == "enter" or event.key == "tab":
+                event.stop()
                 suggest.action_select()
                 return
+            elif event.key == "up":
+                event.stop()
+                suggest.action_nav_up()
+                return
+            elif event.key == "down":
+                event.stop()
+                suggest.action_nav_down()
+                return
+            elif event.key == "escape":
+                event.stop()
+                suggest.action_dismiss()
+                return
+        if event.key == "enter":
+            event.stop()
             if event.ctrl:
                 self.query_one(TextArea).insert("\n")
             else:

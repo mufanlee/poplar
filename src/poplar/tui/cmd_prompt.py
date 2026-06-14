@@ -55,6 +55,7 @@ class CommandSuggestion(Vertical):
         self._visible = True
         self.styles.display = "block"
         self._render_list()
+        self.focus()
 
     def hide(self):
         """Hide the popup."""

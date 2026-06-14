@@ -12,7 +12,8 @@ from poplar.i18n import t, get_model
 from poplar.persistence.store import SessionStore
 from poplar.tools.base import TOOL_DEFINITIONS, execute_tool
 from poplar.persistence.cache import CacheManager, hash_messages
-from poplar.i18n import get_cache_config
+from poplar.core.context import ContextManager
+from poplar.i18n import get_cache_config, get_context_config
 import os
 import json
 import logging
@@ -157,6 +158,15 @@ class PoplarApp(App):
         self._streaming = False
         self._streaming_msg = None
         self._pending_count = 0
+        self._compress_timer = None
+
+        # Context manager for smart summarization
+        ctx_cfg = get_context_config()
+        self.context_mgr = ContextManager(
+            max_tokens=ctx_cfg["max_tokens"],
+            auto_compress_at=ctx_cfg["auto_compress_at"],
+            keep_recent_exchanges=ctx_cfg["keep_recent_exchanges"],
+        )
         logger.info("Provider initialized with API key: %s...%s", api_key[:6], api_key[-4:])
 
     def compose(self) -> ComposeResult:
@@ -270,6 +280,12 @@ class PoplarApp(App):
 
     def on_composer_submit(self, event: ComposerSubmit):
         """Handle user message submission."""
+        text = event.text.strip()
+
+        # Handle /commands
+        if text == "/compress":
+            self._compress_conversation()
+            return
         # If a response is streaming, queue this message for later
         if self._streaming:
             user_msg = Message(role=Role.USER, content=event.text)
@@ -546,6 +562,14 @@ class PoplarApp(App):
         logger.info("Streaming response finalized")
         self._check_pending()
 
+        # Auto-compress if token count exceeds threshold
+        if self.context_mgr.should_compress(self._total_tokens):
+            logger.info("Token count %d exceeds threshold, auto-compressing", self._total_tokens)
+            # Delay to avoid blocking UI after stream finalization
+            if self._compress_timer:
+                self._compress_timer.reset()
+            self._compress_timer = self.set_timer(0.5, self._compress_conversation)
+
     def _check_pending(self):
         """If user queued input during streaming, process it now."""
         count = self._pending_count
@@ -560,6 +584,71 @@ class PoplarApp(App):
             self._animate_spinner()
             self._update_status_bar()
             self._start_timer = self.set_timer(0.3, self._start_api_call)
+
+    def _compress_conversation(self):
+        """Compress earlier messages using LLM summarization (runs in worker thread)."""
+        self.notify(t("compress_start"))
+
+        # Show a system message indicating compression
+        chat_view = self.query_one(ChatView)
+        compress_msg = Message(
+            role=Role.SYSTEM,
+            content=f"🔄 {t('compress_start')}"
+        )
+        chat_view.add_message(compress_msg)
+        chat_view.scroll_end(animate=False)
+
+        # Run compression in a background thread to avoid blocking the UI
+        self.run_worker(self._do_compress, thread=True)
+
+    def _do_compress(self):
+        """Worker thread: perform the actual summarization."""
+        worker = get_current_worker()
+        ctx = self.context_mgr
+
+        old_msgs, recent_msgs = ctx.get_summarizable_messages(
+            self.session.messages
+        )
+        if not old_msgs or len(old_msgs) < 2:
+            self.call_from_thread(self.notify, t("compress_done") + " — nothing to compress")
+            return
+
+        try:
+            # Build summarization prompt
+            prompt = ctx.build_summary_prompt(old_msgs)
+            logger.info("Compressing %d messages...", len(old_msgs))
+
+            # Call API (blocks this thread, not the UI)
+            response = self.provider.chat(
+                [Message(role=Role.USER, content=prompt)]
+            )
+            if worker.is_cancelled:
+                return
+
+            summary = response.content.strip()
+
+            # Apply compression on main thread
+            self.call_from_thread(self._apply_compression, summary, recent_msgs)
+
+        except Exception as e:
+            logger.error("Compression failed: %s", str(e), exc_info=True)
+            self.call_from_thread(self.notify, f"[red]{t('error')}: {e}[/red]")
+
+    def _apply_compression(self, summary: str, recent_msgs: list):
+        """Main thread: apply compression result to session and UI."""
+        ctx = self.context_mgr
+        ctx.apply_compression(self.session, summary, recent_msgs)
+        self._total_tokens = ctx.get_cumulative_token_count(self.session)
+
+        # Reload chat view
+        chat_view = self.query_one(ChatView)
+        chat_view.messages = list(self.session.messages)
+        chat_view.chat_display.update_messages(chat_view.messages)
+        chat_view.scroll_end(animate=False)
+
+        self._update_status_bar()
+        self.notify(t("compress_done"))
+        logger.info("Compression complete")
 
     def _is_thinking_msg(self, m: Message) -> bool:
         """Check if a message is a thinking/spinner indicator."""

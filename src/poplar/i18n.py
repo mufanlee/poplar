@@ -16,6 +16,13 @@ CACHE_DEFAULTS = {
     "api_response_ttl": 3600,      # 1 hour
 }
 
+# Context window defaults
+CONTEXT_DEFAULTS = {
+    "max_tokens": 32768,
+    "auto_compress_at": 0.7,
+    "keep_recent_exchanges": 3,
+}
+
 # Translation dictionaries
 TRANSLATIONS = {
     "en": {
@@ -72,6 +79,10 @@ TRANSLATIONS = {
 
         # Tool results
         "tool_result_prefix": "🔧 {name}",
+
+        # Context
+        "compress_start": "Compressing conversation...",
+        "compress_done": "Compression complete",
     },
     "zh": {
         # Welcome screen
@@ -127,6 +138,10 @@ TRANSLATIONS = {
 
         # Tool results
         "tool_result_prefix": "🔧 {name}",
+
+        # Context
+        "compress_start": "正在压缩对话...",
+        "compress_done": "压缩完成",
     }
 }
 
@@ -149,6 +164,7 @@ def init_config():
             "language": DEFAULT_LANGUAGE,
             "model": DEFAULT_MODEL,
             "cache": dict(CACHE_DEFAULTS),
+            "context": dict(CONTEXT_DEFAULTS),
         }
         save_config(default_config)
 
@@ -176,6 +192,15 @@ def get_cache_config() -> dict:
     user_cache = config.get("cache", {})
     merged = dict(CACHE_DEFAULTS)
     merged.update(user_cache)
+    return merged
+
+
+def get_context_config() -> dict:
+    """Get context window configuration with defaults for missing keys."""
+    config = load_config()
+    user_ctx = config.get("context", {})
+    merged = dict(CONTEXT_DEFAULTS)
+    merged.update(user_ctx)
     return merged
 
 

@@ -13,6 +13,7 @@ import os
 import json
 import logging
 import time
+from datetime import datetime
 
 
 class StatusFooter(Static):
@@ -289,6 +290,12 @@ class PoplarApp(App):
             return
         if text.startswith("/provider"):
             self._handle_provider_command(text)
+            return
+        if text.startswith("/export"):
+            self._export_session(text)
+            return
+        if text.startswith("/import"):
+            self._import_session(text)
             return
         # If a response is streaming, queue this message for later
         if self._streaming:
@@ -772,6 +779,66 @@ class PoplarApp(App):
         except Exception as e:
             logger.error("Failed to switch provider: %s", str(e), exc_info=True)
             self.notify(f"[red]Failed: {e}[/red]")
+
+    def _export_session(self, text: str):
+        """Export current session to a JSON file."""
+        parts = text.split(maxsplit=1)
+        path_str = parts[1] if len(parts) > 1 else f"poplar-session-{self.session.id}.json"
+        path = Path(path_str).expanduser().resolve()
+
+        try:
+            data = {
+                "poplar_session": True,
+                "version": 1,
+                "exported_at": datetime.now().isoformat(),
+                "session": {
+                    "title": self.session.title,
+                    "created_at": self.session.created_at.isoformat() if self.session.created_at else None,
+                    "messages": [m.to_dict() for m in self.session.messages],
+                }
+            }
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+            self.notify(f"📤 Exported to {path.name}")
+            logger.info("Session exported to %s", path)
+        except Exception as e:
+            logger.error("Export failed: %s", str(e), exc_info=True)
+            self.notify(f"[red]Export failed: {e}[/red]")
+
+    def _import_session(self, text: str):
+        """Import a session from a JSON file."""
+        parts = text.split(maxsplit=1)
+        if len(parts) < 2:
+            self.notify("[red]Usage: /import <path>[/red]")
+            return
+        path = Path(parts[1]).expanduser().resolve()
+
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if not data.get("poplar_session"):
+                self.notify("[red]Not a valid Poplar session file[/red]")
+                return
+
+            session_data = data["session"]
+            title = session_data.get("title", "Imported Chat")
+
+            new_session = self.store.create_session(title=title)
+            for msg_dict in session_data.get("messages", []):
+                msg = Message.from_dict(msg_dict)
+                self.store.save_message(new_session.id, msg)
+
+            self.session = self.store.get_session(new_session.id)
+            self._message_count = sum(1 for m in self.session.messages if m.role != Role.SYSTEM)
+            self._first_message = self._message_count == 0
+            self._total_tokens = 0
+            chat_view = self.query_one(ChatView)
+            chat_view.messages = list(self.session.messages)
+            self._update_status_bar()
+            self.notify(f"📥 Imported: {title} ({self._message_count} messages)")
+            logger.info("Session imported from %s: %s", path, new_session.id)
+        except Exception as e:
+            logger.error("Import failed: %s", str(e), exc_info=True)
+            self.notify(f"[red]Import failed: {e}[/red]")
 
     def _is_thinking_msg(self, m: Message) -> bool:
         """Check if a message is a thinking/spinner indicator."""

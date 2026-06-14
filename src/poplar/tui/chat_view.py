@@ -85,7 +85,7 @@ class CopyButton(Static):
     """A small clickable copy button shown at top-right of each message."""
 
     def __init__(self, parent_widget):
-        super().__init__("📋")
+        super().__init__("copy")
         self._parent = parent_widget
 
     def on_click(self):
@@ -97,7 +97,7 @@ class CopyButton(Static):
 
     DEFAULT_CSS = """
     CopyButton {
-        width: 3;
+        width: 6;
         height: 1;
         padding: 0 0 0 0;
         text-align: center;

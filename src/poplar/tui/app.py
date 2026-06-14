@@ -286,6 +286,9 @@ class PoplarApp(App):
         if text == "/compress":
             self._compress_conversation()
             return
+        if text == "/context":
+            self._show_context_info()
+            return
         # If a response is streaming, queue this message for later
         if self._streaming:
             user_msg = Message(role=Role.USER, content=event.text)
@@ -649,6 +652,43 @@ class PoplarApp(App):
         self._update_status_bar()
         self.notify(t("compress_done"))
         logger.info("Compression complete")
+
+    def _show_context_info(self):
+        """Show current context status as a system message."""
+        from poplar.core.context import estimate_tokens, messages_token_count
+
+        total_msgs = len(self.session.messages)
+        user_msgs = sum(1 for m in self.session.messages if m.role == Role.USER)
+        assistant_msgs = sum(1 for m in self.session.messages if m.role == Role.ASSISTANT)
+        system_msgs = sum(1 for m in self.session.messages if m.role == Role.SYSTEM)
+        tool_msgs = sum(1 for m in self.session.messages if m.role == Role.TOOL)
+
+        token_est = messages_token_count(self.session.messages)
+        threshold = int(self.context_mgr.max_tokens * self.context_mgr.auto_compress_at)
+        pct = round(token_est / self.context_mgr.max_tokens * 100, 1)
+
+        has_summary = any(
+            m.role == Role.SYSTEM and m.content.startswith("[Summary")
+            for m in self.session.messages
+        )
+
+        lines = [
+            f"[bold]📊 Context Info[/bold]",
+            f"Model: {self.provider.model}",
+            f"Messages: {total_msgs} total ({user_msgs} user, {assistant_msgs} assistant, {system_msgs} system, {tool_msgs} tool)",
+            f"Token estimate: {token_est} / {self.context_mgr.max_tokens} ({pct}%)",
+            f"Auto-compress threshold: {threshold} tokens ({int(self.context_mgr.auto_compress_at * 100)}%)",
+            f"Keep recent: {self.context_mgr.keep_recent_exchanges} exchanges",
+            f"Has summary: {'✅' if has_summary else '❌'}",
+            f"Total tokens (tracked): {self._total_tokens}",
+            "",
+            f"[dim]/compress — manually compress[/dim]",
+        ]
+
+        msg = Message(role=Role.SYSTEM, content="\n".join(lines))
+        chat_view = self.query_one(ChatView)
+        chat_view.add_message(msg)
+        chat_view.scroll_end(animate=False)
 
     def _is_thinking_msg(self, m: Message) -> bool:
         """Check if a message is a thinking/spinner indicator."""

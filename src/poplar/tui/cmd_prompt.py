@@ -90,7 +90,7 @@ class CommandSuggestion(ModalScreen[str]):
     CommandSuggestion {
         align: left bottom;
         margin-left: 1;
-        margin-bottom: 6;
+        margin-bottom: 3;
         height: auto;
     }
     #cmd-box {

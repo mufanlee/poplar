@@ -170,7 +170,7 @@ class PoplarApp(App):
             auto_compress_at=ctx_cfg["auto_compress_at"],
             keep_recent_exchanges=ctx_cfg["keep_recent_exchanges"],
         )
-        logger.info("Provider initialized with API key: %s...%s", api_key[:6], api_key[-4:])
+        logger.info("Provider initialized: %s (model: %s)", self._provider_name, self.provider.model)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)

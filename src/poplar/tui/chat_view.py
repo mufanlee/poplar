@@ -1,4 +1,4 @@
-"""Chat message display widgets — each message with a copy button."""
+"""Chat message display widgets."""
 
 from textual.widgets import Static
 from textual.containers import ScrollableContainer
@@ -46,7 +46,7 @@ def build_welcome():
 
 
 class MessageWidget(Static):
-    """A single chat message — clicking anywhere copies content."""
+    """A single chat message."""
 
     def __init__(self, message: Message):
         super().__init__()
@@ -54,25 +54,19 @@ class MessageWidget(Static):
         self._build()
 
     def _build(self):
-        """Render the message with 'copy' in the panel title."""
+        """Render the message."""
         msg = self._msg
         if msg.role == Role.USER:
-            title = Text()
-            title.append(f"👤 {t('title_you')} ")
-            title.append("[copy]", style="dim italic")
             self.update(Panel(
                 Text(msg.content),
-                title=title,
+                title=f"👤 {t('title_you')}",
                 border_style="blue",
                 padding=(0, 1),
             ))
         elif msg.role == Role.ASSISTANT:
-            title = Text()
-            title.append(f"🤖 {t('title_assistant')} ")
-            title.append("[copy]", style="dim italic")
             self.update(Panel(
                 Markdown(msg.content),
-                title=title,
+                title=f"🤖 {t('title_assistant')}",
                 border_style="green",
                 padding=(0, 1),
                 expand=False,
@@ -87,20 +81,10 @@ class MessageWidget(Static):
                 lines.append(f"  {line}")
             self.update(Text("\n".join(lines), style="dim"))
 
-    def on_click(self):
-        """Click anywhere on the message to copy its content."""
-        content = self._msg.content
-        if content:
-            self.app.copy_to_clipboard(content)
-            self.app.notify(f"📋 Copied: {content[:60]}...")
-
     DEFAULT_CSS = """
     MessageWidget {
         height: auto;
         margin: 0 0 0 0;
-    }
-    MessageWidget:hover {
-        background: $boost;
     }
     """
 

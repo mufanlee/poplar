@@ -87,6 +87,12 @@ class MessageWidget(Static):
                 lines.append(f"  {line}")
             self.update(Text("\n".join(lines), style="dim"))
 
+    def on_click(self):
+        """Click message to copy its content."""
+        if self._msg.content:
+            self.app.copy_to_clipboard(self._msg.content)
+            self.app.notify(f"📋 Copied: {self._msg.content[:60]}...")
+
     DEFAULT_CSS = """
     MessageWidget {
         height: auto;

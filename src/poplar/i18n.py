@@ -23,6 +23,16 @@ CONTEXT_DEFAULTS = {
     "keep_recent_exchanges": 3,
 }
 
+# Provider defaults
+DEFAULT_PROVIDER = "deepseek"
+
+PROVIDER_DEFAULTS = {
+    "deepseek": {"model": "deepseek-chat"},
+    "openai": {"model": "gpt-4o"},
+    "anthropic": {"model": "claude-3-5-sonnet-20241022"},
+    "ollama": {"model": "llama3", "base_url": "http://localhost:11434"},
+}
+
 # Translation dictionaries
 TRANSLATIONS = {
     "en": {
@@ -163,6 +173,8 @@ def init_config():
         default_config = {
             "language": DEFAULT_LANGUAGE,
             "model": DEFAULT_MODEL,
+            "provider": DEFAULT_PROVIDER,
+            "providers": {k: dict(v) for k, v in PROVIDER_DEFAULTS.items()},
             "cache": dict(CACHE_DEFAULTS),
             "context": dict(CONTEXT_DEFAULTS),
         }
@@ -202,6 +214,28 @@ def get_context_config() -> dict:
     merged = dict(CONTEXT_DEFAULTS)
     merged.update(user_ctx)
     return merged
+
+
+def get_active_provider_name() -> str:
+    """Get the active provider name from config."""
+    config = load_config()
+    return config.get("provider", DEFAULT_PROVIDER)
+
+
+def get_provider_config() -> dict:
+    """Get the full provider configuration.
+
+    Returns:
+        {"name": "deepseek", "config": {"model": "deepseek-chat", ...}}
+    """
+    config = load_config()
+    name = config.get("provider", DEFAULT_PROVIDER)
+    providers_section = config.get("providers", {})
+    user_cfg = providers_section.get(name, {})
+    defaults = PROVIDER_DEFAULTS.get(name, {})
+    merged = dict(defaults)
+    merged.update(user_cfg)
+    return {"name": name, "config": merged}
 
 
 def get_language():

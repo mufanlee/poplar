@@ -1,4 +1,4 @@
-from typing import Protocol, List, AsyncIterator
+from typing import Protocol, List, AsyncIterator, Iterator, Dict, Any
 from poplar.core.session import Message
 
 
@@ -21,6 +21,16 @@ class Provider(Protocol):
 
     async def stream(self, messages: List[Message], **kwargs) -> AsyncIterator[str]:
         """Stream response chunks."""
+        ...
+
+    def stream_sync(self, messages: List[Message], tools: List[Dict[str, Any]] = None, **kwargs) -> Iterator[Dict[str, Any]]:
+        """Synchronous streaming with optional tool calling support.
+        
+        Yields dicts:
+        - {"type": "content", "text": "..."}
+        - {"type": "tool_call", "id": "...", "name": "...", "arguments": "..."}
+        - {"type": "done"}
+        """
         ...
 
     def get_models(self) -> List[ModelInfo]:

@@ -7,13 +7,8 @@ from poplar.tui.chat_view import ChatView, MessageWidget
 from poplar.tui.composer import Composer, ComposerSubmit
 from poplar.tui.session_picker import SessionPicker
 from poplar.core.session import Session, Message, Role
-from poplar.providers.deepseek import DeepSeekProvider
-from poplar.i18n import t, get_model
-from poplar.persistence.store import SessionStore
-from poplar.tools.base import TOOL_DEFINITIONS, execute_tool
-from poplar.persistence.cache import CacheManager, hash_messages
-from poplar.core.context import ContextManager
-from poplar.i18n import get_cache_config, get_context_config
+from poplar.providers import create_provider, get_available_providers
+from poplar.i18n import t, get_cache_config, get_context_config, get_active_provider_name, get_provider_config
 import os
 import json
 import logging
@@ -31,11 +26,12 @@ class StatusFooter(Static):
         self.update(self.render())
 
     def render(self):
+        provider = self.app_instance._provider_name
         model = self.app_instance.provider.model
         tokens = self.app_instance._total_tokens
         messages = self.app_instance._message_count
 
-        return f"[bold]{model}[/bold] | {t('status_tokens')}: {tokens} | {t('status_messages')}: {messages}"
+        return f"[bold]{provider}:{model}[/bold] | {t('status_tokens')}: {tokens} | {t('status_messages')}: {messages}"
 
 
 # Configure logging
@@ -132,9 +128,11 @@ class PoplarApp(App):
         super().__init__()
         logger.info("Application starting")
         self.store = SessionStore()
-        api_key = os.getenv("DEEPSEEK_API_KEY", "your-api-key-here")
-        model = get_model()
-        self.provider = DeepSeekProvider(api_key=api_key, model=model)
+
+        # Create provider from config
+        self._provider_name = get_active_provider_name()
+        prov_cfg = get_provider_config()
+        self.provider = create_provider(prov_cfg["name"], prov_cfg["config"])
         
         # Load existing session or create default
         sessions = self.store.list_sessions()
@@ -288,6 +286,9 @@ class PoplarApp(App):
             return
         if text == "/context":
             self._show_context_info()
+            return
+        if text.startswith("/provider"):
+            self._handle_provider_command(text)
             return
         # If a response is streaming, queue this message for later
         if self._streaming:
@@ -709,6 +710,68 @@ class PoplarApp(App):
         chat_view = self.query_one(ChatView)
         chat_view.add_message(msg)
         chat_view.scroll_end(animate=False)
+
+    def _handle_provider_command(self, text: str):
+        """Handle /provider commands."""
+        parts = text.split()
+        cmd = parts[1] if len(parts) > 1 else "show"
+
+        if cmd == "list":
+            available = get_available_providers()
+            current = self._provider_name
+            lines = ["[bold]Available providers:[/bold]"]
+            for name in available:
+                marker = "●" if name == current else "○"
+                lines.append(f"  {marker} {name}")
+            lines.append(f"\n[dim]Usage: /provider set <name>[/dim]")
+            msg = Message(role=Role.SYSTEM, content="\n".join(lines))
+            chat_view = self.query_one(ChatView)
+            chat_view.add_message(msg)
+            chat_view.scroll_end(animate=False)
+
+        elif cmd == "set" and len(parts) >= 3:
+            name = parts[2]
+            if name not in get_available_providers():
+                self.notify(f"[red]Unknown provider: {name}[/red]")
+                return
+            self._switch_provider(name)
+
+        else:
+            # Show current provider info
+            models = self.provider.get_models()
+            model_list = ", ".join(m.id for m in models)
+            lines = [
+                f"[bold]Current provider: {self._provider_name}[/bold]",
+                f"Model: {self.provider.model}",
+                f"Available models: {model_list}",
+                "",
+                f"[dim]Commands: /provider list, /provider set <name>[/dim]",
+            ]
+            msg = Message(role=Role.SYSTEM, content="\n".join(lines))
+            chat_view = self.query_one(ChatView)
+            chat_view.add_message(msg)
+            chat_view.scroll_end(animate=False)
+
+    def _switch_provider(self, name: str):
+        """Switch to a different provider at runtime."""
+        from poplar.i18n import save_config, load_config
+
+        try:
+            config = load_config()
+            prov_cfg = config.get("providers", {}).get(name, {})
+            self.provider = create_provider(name, prov_cfg)
+            self._provider_name = name
+
+            # Persist to config
+            config["provider"] = name
+            save_config(config)
+
+            self._update_status_bar()
+            self.notify(f"Switched to [bold]{name}[/bold] ({self.provider.model})")
+            logger.info("Switched provider to %s (model: %s)", name, self.provider.model)
+        except Exception as e:
+            logger.error("Failed to switch provider: %s", str(e), exc_info=True)
+            self.notify(f"[red]Failed: {e}[/red]")
 
     def _is_thinking_msg(self, m: Message) -> bool:
         """Check if a message is a thinking/spinner indicator."""

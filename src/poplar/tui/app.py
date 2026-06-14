@@ -374,13 +374,17 @@ class PoplarApp(App):
             
             chat_view = self.query_one(ChatView)
             self.session.messages = [m for m in self.session.messages if not self._is_thinking_msg(m)]
-            chat_view.messages = [m for m in chat_view.messages 
-                                 if not self._is_thinking_msg(m) 
-                                 and m is not self._streaming_msg]
+            # Also remove streaming msg from session if present
+            if self._streaming_msg and self._streaming_msg in self.session.messages:
+                self.session.messages.remove(self._streaming_msg)
+
+            # Rebuild from session (removes stale widgets)
+            chat_view._rebuild(self.session.messages)
             
             cancel_msg = Message(role=Role.SYSTEM, content=t("request_cancelled"))
             self.session.add_message(cancel_msg)
-            chat_view.add_message(cancel_msg)
+            w = MessageWidget(cancel_msg)
+            chat_view.chat_display.mount(w)
             
             self._streaming = False
             self._pending_count = 0
@@ -524,11 +528,12 @@ class PoplarApp(App):
         return any(kw in msg_lower for kw in retryable)
 
     def _show_tool_result(self, name: str, content: str):
-        """Show tool execution result as a system message."""
+        """Show tool execution result as a system message (mount directly, no reactive)."""
         chat_view = self.query_one(ChatView)
         preview = content[:500] + "..." if len(content) > 500 else content
         tool_msg = Message(role=Role.SYSTEM, content=f"{t('tool_result_prefix', name=name)}\n{preview}")
-        chat_view.add_message(tool_msg)
+        w = MessageWidget(tool_msg)
+        chat_view.chat_display.mount(w)
         chat_view.scroll_end(animate=False)
 
     def _update_streaming(self, content: str):
@@ -570,6 +575,12 @@ class PoplarApp(App):
         self.store.save_message(self.session.id, assistant_msg)
         self._message_count += 1
         self._total_tokens += max(1, len(content) // 3)
+        self._streaming_msg = None
+
+        # Sync chat view with session (rebuilds all widgets from session.messages)
+        chat_view = self.query_one(ChatView)
+        chat_view.messages = list(self.session.messages)
+
         self._update_status_bar()
         self._streaming = False
         logger.info("Streaming response finalized")
@@ -722,11 +733,13 @@ class PoplarApp(App):
         # Rebuild chat view to match session
         chat_view._rebuild(self.session.messages)
 
-        # Show error as assistant message
+        # Show error as assistant message (mount directly, session already has it)
         error_msg = Message(role=Role.ASSISTANT, content=f"[red]{t('error')}: {error}[/red]")
         self.session.add_message(error_msg)
         self.store.save_message(self.session.id, error_msg)
-        chat_view.add_message(error_msg)
+        # Rebuild to display error
+        chat_view._rebuild(self.session.messages)
+        chat_view.scroll_end(animate=False)
         self._update_status_bar()
         self._streaming = False
         self._check_pending()

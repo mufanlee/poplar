@@ -59,7 +59,7 @@ class MessageWidget(Static):
         if msg.role == Role.USER:
             title = Text()
             title.append(f"👤 {t('title_you')} ")
-            title.append("[Ctrl+C]", style="dim italic")
+            title.append("copy", style="dim italic")
             self.update(Panel(
                 Text(msg.content),
                 title=title,
@@ -69,7 +69,7 @@ class MessageWidget(Static):
         elif msg.role == Role.ASSISTANT:
             title = Text()
             title.append(f"🤖 {t('title_assistant')} ")
-            title.append("[Ctrl+C]", style="dim italic")
+            title.append("copy", style="dim italic")
             self.update(Panel(
                 Markdown(msg.content),
                 title=title,

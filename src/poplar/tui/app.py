@@ -194,7 +194,7 @@ class PoplarApp(App):
         sessions = self.store.list_sessions()
         self.push_screen(SessionPicker(sessions, self.session.id), self._handle_picker_result)
 
-    def _handle_picker_result(self, result):
+    def _handle_picker_result(self, result: str | None):
         """Handle result from session picker dialog."""
         if result is None:
             return
@@ -279,7 +279,7 @@ class PoplarApp(App):
         try:
             footer = self.query_one(StatusFooter)
             footer.update(footer.render())
-        except Exception:
+        except Exception:  # Widget not yet mounted during startup
             pass
 
     def on_composer_submit(self, event: ComposerSubmit):

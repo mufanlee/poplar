@@ -6,7 +6,7 @@ from typing import Optional
 from poplar.providers.base import Provider
 
 # Registry: maps provider name → config dict
-_PROVIDER_REGISTRY: dict = {
+_PROVIDER_REGISTRY: dict[str, dict[str, Optional[str]]] = {
     "deepseek": {
         "module": "poplar.providers.deepseek",
         "class": "DeepSeekProvider",
@@ -59,7 +59,7 @@ def create_provider(name: str, user_config: Optional[dict] = None) -> Provider:
     # API key: user_config > env var
     env_key: Optional[str] = info.get("env_key")  # type: ignore[assignment]
     api_key: Optional[str] = config.get("api_key") or (os.getenv(env_key) if env_key else None)
-    model: str = config.get("model", info.get("default_model", ""))
+    model: str = str(config.get("model") or info.get("default_model", ""))
     base_url: Optional[str] = config.get("base_url")
 
     module = importlib.import_module(str(info["module"]))

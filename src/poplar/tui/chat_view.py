@@ -107,7 +107,7 @@ class WelcomeWidget(Static):
 class ChatView(ScrollableContainer):
     """Scrollable container for chat messages."""
 
-    messages: reactive[list] = reactive([], init=False)
+    messages: reactive[list[Message]] = reactive([], init=False)
 
     DEFAULT_CSS = """
     ChatView {

@@ -98,10 +98,9 @@ class SessionPicker(ModalScreen[str | None]):
         if self._renaming or not self._sessions: return
         self._renaming = True
         s = self._sessions[self._nav_index]
-        try:
-            self.query_one("#rename-input").remove()
-        except Exception:
-            pass
+        rename_input = self.query("#rename-input")
+        if rename_input:
+            rename_input.first().remove()
         box = self.query_one("#picker-box")
         box.mount(Input(value=s.title, id="rename-input"))
         self.query_one("#rename-input").focus()

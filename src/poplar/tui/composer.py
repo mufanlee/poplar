@@ -49,7 +49,7 @@ class Composer(Widget):
 
     def on_key(self, event):
         suggest = self.query_one(CommandSuggestion)
-        if suggest._visible:
+        if suggest.is_visible:
             if event.key == "enter" or event.key == "tab":
                 event.stop()
                 suggest.action_select()

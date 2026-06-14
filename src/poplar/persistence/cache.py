@@ -63,7 +63,7 @@ class CacheManager:
 
     def __init__(self, db_path: Optional[str] = None, max_memory: Optional[int] = None):
         self.db_path = db_path or get_cache_db_path()
-        self.max_memory = max_memory or 100
+        self.max_memory = max_memory if max_memory is not None else 100
         self._memory: OrderedDict[str, CacheEntry] = OrderedDict()
         self._init_table()
 

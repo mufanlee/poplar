@@ -3,6 +3,7 @@
 import os
 import subprocess
 from pathlib import Path
+from typing import Dict, Any
 from poplar.tools.base import ToolResult
 
 
@@ -14,7 +15,7 @@ def _safe_path(path: str) -> Path:
     return p.resolve()
 
 
-def read_file(args: dict) -> ToolResult:
+def read_file(args: Dict[str, Any]) -> ToolResult:
     """Read a file and return its contents."""
     path = _safe_path(args["path"])
     try:
@@ -31,7 +32,7 @@ def read_file(args: dict) -> ToolResult:
         return ToolResult(content=f"Error reading file: {str(e)}", success=False)
 
 
-def write_file(args: dict) -> ToolResult:
+def write_file(args: Dict[str, Any]) -> ToolResult:
     """Write content to a file."""
     path = _safe_path(args["path"])
     content = args["content"]
@@ -45,7 +46,7 @@ def write_file(args: dict) -> ToolResult:
         return ToolResult(content=f"Error writing file: {str(e)}", success=False)
 
 
-def list_directory(args: dict) -> ToolResult:
+def list_directory(args: Dict[str, Any]) -> ToolResult:
     """List directory contents."""
     path = _safe_path(args.get("path", "."))
     try:
@@ -58,7 +59,7 @@ def list_directory(args: dict) -> ToolResult:
                 try:
                     s = item.stat().st_size
                     size = f" ({s:,} bytes)"
-                except Exception:
+                except OSError:
                     pass
             lines.append(f"  {item.name}{suffix}{size}")
         header = f"Contents of {path}:\n"
@@ -69,7 +70,7 @@ def list_directory(args: dict) -> ToolResult:
         return ToolResult(content=f"Error listing directory: {str(e)}", success=False)
 
 
-def run_command(args: dict) -> ToolResult:
+def run_command(args: Dict[str, Any]) -> ToolResult:
     """Execute a shell command."""
     cmd = args["command"]
     try:

@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-def setup_crash_handler():
+def setup_crash_handler() -> None:
     """Install a crash handler that logs unhandled exceptions."""
     # Find a writable directory for crash logs
     for base in (Path.home() / ".poplar", Path.cwd() / ".poplar"):
@@ -38,7 +38,7 @@ def setup_crash_handler():
     sys.excepthook = crash_handler
 
 
-def main():
+def main() -> int:
     """Main entry point for Poplar."""
     setup_crash_handler()
 

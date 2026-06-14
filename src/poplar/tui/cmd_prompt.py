@@ -41,8 +41,11 @@ class CommandSuggestion(Vertical):
         super().__init__(**kwargs)
         self._filter = ""
         self._index = 0
-        self._visible = False
-        self.display = False
+        self._visible: bool = False
+
+    @property
+    def is_visible(self) -> bool:
+        return self._visible
 
     def compose(self):
         yield Static(" Commands ", id="cmd-title")

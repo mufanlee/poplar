@@ -156,7 +156,7 @@ TRANSLATIONS = {
 }
 
 # Current language
-_current_language = DEFAULT_LANGUAGE
+_current_language: str = DEFAULT_LANGUAGE
 
 
 def get_config_path():
@@ -238,7 +238,7 @@ def get_provider_config() -> dict:
     return {"name": name, "config": merged}
 
 
-def get_language():
+def get_language() -> str:
     """Get the current language."""
     global _current_language
     
@@ -257,7 +257,7 @@ def get_language():
     return DEFAULT_LANGUAGE
 
 
-def set_language(language):
+def set_language(language: str) -> bool:
     """Set the current language and save to config."""
     global _current_language
     if language in TRANSLATIONS:

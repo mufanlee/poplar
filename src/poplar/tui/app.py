@@ -147,7 +147,6 @@ class PoplarApp(App):
             # Count non-system messages on load
             self._message_count = sum(1 for m in self.session.messages if m.role != Role.SYSTEM)
             self._first_message = self._message_count == 0
-            self._total_tokens = self.context_mgr.get_cumulative_token_count(self.session)
             logger.info("Loaded existing session: %s (%d messages)", self.session.id, self._message_count)
         else:
             self.session = self.store.create_session(title="New Chat")
@@ -172,6 +171,11 @@ class PoplarApp(App):
             auto_compress_at=ctx_cfg["auto_compress_at"],
             keep_recent_exchanges=ctx_cfg["keep_recent_exchanges"],
         )
+
+        # Recalculate token count from loaded session (after context_mgr init)
+        if self._message_count > 0:
+            self._total_tokens = self.context_mgr.get_cumulative_token_count(self.session)
+
         logger.info("Provider initialized: %s (model: %s)", self._provider_name, self.provider.model)
 
     def compose(self) -> ComposeResult:

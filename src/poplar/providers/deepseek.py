@@ -1,3 +1,4 @@
+import os
 import openai
 from typing import List, AsyncIterator
 from poplar.providers.base import Provider, ChatResponse, ModelInfo
@@ -9,6 +10,11 @@ class DeepSeekProvider:
         self.api_key = api_key
         self.base_url = base_url
         self.model = model
+
+        # Clear proxy environment variables to avoid IPv6 parsing issues
+        for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']:
+            os.environ.pop(var, None)
+
         self.client = openai.OpenAI(api_key=api_key, base_url=base_url)
 
     def chat(self, messages: List[Message], **kwargs) -> ChatResponse:

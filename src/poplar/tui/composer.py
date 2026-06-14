@@ -1,6 +1,7 @@
 from textual.widget import Widget
-from textual.widgets import TextArea
+from textual.widgets import Input
 from textual.message import Message
+from poplar.i18n import t
 
 
 class ComposerSubmit(Message):
@@ -11,16 +12,15 @@ class ComposerSubmit(Message):
 
 
 class Composer(Widget):
-    """Multi-line input field for user messages."""
+    """Input field for user messages."""
 
     def compose(self):
-        self.text_area = TextArea(id="input")
-        yield self.text_area
+        yield Input(placeholder=t("composer_placeholder"), id="input")
 
-    def on_key(self, event):
-        if event.key == "enter" and not event.shift:
-            event.prevent_default()
-            text = self.text_area.text
-            if text.strip():
-                self.post_message(ComposerSubmit(text=text))
-                self.text_area.text = ""
+    def on_input_submitted(self, event: Input.Submitted):
+        """Handle Enter key - send message."""
+        text = event.value
+        if text.strip():
+            self.post_message(ComposerSubmit(text=text))
+            # Clear the input
+            self.query_one(Input).value = ""

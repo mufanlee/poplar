@@ -1,0 +1,10 @@
+# Poplar Configuration Example
+# This file is automatically created at ~/.poplar/config.yaml on first run
+
+# Language: en (English) or zh (Chinese)
+language: en
+
+# Model: deepseek-chat or deepseek-coder
+model: deepseek-chat
+
+# Note: API key should be set via environment variable DEEPSEEK_API_KEY

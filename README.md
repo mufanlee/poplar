@@ -4,7 +4,26 @@ AI Agent TUI application built with Python and Textual framework.
 
 ## Overview
 
-Poplar is a terminal-based AI agent that helps you with coding tasks, file operations, and more. It supports multiple AI providers and features a rich terminal user interface.
+Poplar (杨树) is a terminal-based AI chat application built with Python and Textual framework. It features a rich terminal user interface with DeepSeek API integration, supporting both English and Chinese languages.
+
+## Features
+
+### Core Features
+- **Rich TUI Interface**: Built with Textual framework, featuring rounded borders, themed scrollbars, and message bubbles
+- **DeepSeek Integration**: Connect to DeepSeek API for AI-powered conversations
+- **Markdown Rendering**: Assistant responses support Markdown formatting
+- **Real-time Animation**: Spinner animation with elapsed time display during API calls
+- **Request Cancellation**: Press ESC to cancel ongoing API requests
+- **Internationalization**: Support for English and Chinese languages
+- **Configuration Management**: YAML-based configuration file with model selection
+
+### UI Components
+- **Header**: Displays application title "🌳 Poplar" and clock
+- **ChatView**: Scrollable message display area with message bubbles
+- **Composer**: User input field with placeholder text
+- **StatusFooter**: Shows model name, token count, and message count
+- **Footer**: Displays keyboard shortcuts
+- **Welcome Screen**: Centered welcome message with quick start guide
 
 ## Phases
 
@@ -54,25 +73,35 @@ python -m poplar.main
 ### Keyboard Shortcuts
 
 - `Enter` - Send message
-- `Shift+Enter` - New line
-- `q` - Quit application
+- `Ctrl+Q` - Quit application
+- `ESC` - Cancel ongoing API request
+
+### Configuration
+
+Configuration file is automatically created at `~/.poplar/config.yaml` on first run:
+
+```yaml
+# Language: en (English) or zh (Chinese)
+language: en
+
+# Model: deepseek-chat or deepseek-coder
+model: deepseek-chat
+```
+
+You can also use environment variables:
+
+```bash
+# Switch language
+export POPLAR_LANGUAGE=zh
+
+# Set API key
+export DEEPSEEK_API_KEY=your-api-key-here
+```
 
 ### Testing
 
 ```bash
 pytest tests/ -v
-```
-
-## Configuration (Advanced)
-
-Create `~/.config/poplar/config.yaml`:
-
-```yaml
-providers:
-  deepseek:
-    api_key: "your-api-key"
-    base_url: "https://api.deepseek.com/v1"
-    default_model: "deepseek-chat"
 ```
 
 ## Development

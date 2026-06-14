@@ -7,6 +7,15 @@ from pathlib import Path
 DEFAULT_LANGUAGE = "en"
 DEFAULT_MODEL = "deepseek-chat"
 
+# Cache defaults (applied when not present in config)
+CACHE_DEFAULTS = {
+    "enabled": True,
+    "max_memory_items": 100,
+    "tool_read_file_ttl": 300,     # 5 min
+    "tool_list_dir_ttl": 30,       # 30 sec
+    "api_response_ttl": 3600,      # 1 hour
+}
+
 # Translation dictionaries
 TRANSLATIONS = {
     "en": {
@@ -139,6 +148,7 @@ def init_config():
         default_config = {
             "language": DEFAULT_LANGUAGE,
             "model": DEFAULT_MODEL,
+            "cache": dict(CACHE_DEFAULTS),
         }
         save_config(default_config)
 
@@ -158,6 +168,15 @@ def save_config(config):
     config_path = get_config_path()
     with open(config_path, 'w', encoding='utf-8') as f:
         yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
+
+
+def get_cache_config() -> dict:
+    """Get cache configuration with defaults for missing keys."""
+    config = load_config()
+    user_cache = config.get("cache", {})
+    merged = dict(CACHE_DEFAULTS)
+    merged.update(user_cache)
+    return merged
 
 
 def get_language():

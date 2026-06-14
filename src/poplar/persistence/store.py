@@ -11,10 +11,24 @@ from poplar.core.session import Session, Message, Role
 
 
 def get_db_path() -> str:
-    """Get the SQLite database path."""
-    db_dir = Path.home() / ".poplar"
-    db_dir.mkdir(parents=True, exist_ok=True)
-    return str(db_dir / "poplar.db")
+    """Get the SQLite database path.
+
+    Prefers ~/.poplar/poplar.db, but falls back to the project directory
+    if home is on a read-only filesystem.
+    """
+    for base in (Path.home() / ".poplar", Path.cwd() / ".poplar"):
+        try:
+            base.mkdir(parents=True, exist_ok=True)
+            test = base / ".write_test"
+            test.touch()
+            test.unlink()
+            return str(base / "poplar.db")
+        except (OSError, PermissionError):
+            continue
+    # Last resort: temp directory
+    import tempfile
+    tmp = Path(tempfile.mkdtemp(prefix="poplar-"))
+    return str(tmp / "poplar.db")
 
 
 class SessionStore:

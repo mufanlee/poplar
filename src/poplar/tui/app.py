@@ -11,6 +11,8 @@ from poplar.providers.deepseek import DeepSeekProvider
 from poplar.i18n import t, get_model
 from poplar.persistence.store import SessionStore
 from poplar.tools.base import TOOL_DEFINITIONS, execute_tool
+from poplar.persistence.cache import CacheManager, hash_messages
+from poplar.i18n import get_cache_config
 import os
 import json
 import logging
@@ -37,12 +39,31 @@ class StatusFooter(Static):
 
 # Configure logging
 from pathlib import Path
-_log_dir = Path.home() / ".poplar" / "logs"
-_log_dir.mkdir(parents=True, exist_ok=True)
+
+def _get_writable_dir(subdir: str) -> Path:
+    """Get a writable directory, preferring ~/.poplar/<subdir> with fallback."""
+    for base in (Path.home() / ".poplar", Path.cwd() / ".poplar"):
+        candidate = base / subdir
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            test = candidate / ".write_test"
+            test.touch()
+            test.unlink()
+            return candidate
+        except (OSError, PermissionError):
+            continue
+    # Last resort: temp directory
+    import tempfile
+    tmp = Path(tempfile.mkdtemp(prefix="poplar-")) / subdir
+    tmp.mkdir(parents=True, exist_ok=True)
+    return tmp
+
+_log_dir = _get_writable_dir("logs")
+_log_path = _log_dir / "app.log"
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filename=str(_log_dir / "app.log"),
+    filename=str(_log_path),
     filemode='a'
 )
 logger = logging.getLogger(__name__)
@@ -356,9 +377,14 @@ class PoplarApp(App):
         return [system_msg] + meaningful
 
     def _fetch_response(self):
-        """Worker function - supports tool calling with multi-turn."""
+        """Worker function - supports tool calling with multi-turn and API caching."""
         worker = get_current_worker()
         max_turns = 3
+
+        # Cache setup (only on first turn)
+        api_cache = CacheManager() if get_cache_config().get("enabled", True) else None
+        api_cache_key = None
+        api_cache_ttl = get_cache_config().get("api_response_ttl", 3600)
 
         for turn in range(max_turns):
             if worker.is_cancelled:
@@ -367,6 +393,18 @@ class PoplarApp(App):
             accumulated = []
             tool_calls = []
             last_error = None
+
+            # Check API cache on first turn
+            if turn == 0 and api_cache:
+                api_messages = self._get_api_messages()
+                api_cache_key = "api:" + hash_messages(api_messages)
+                cached = api_cache.get(api_cache_key)
+                if cached is not None:
+                    logger.info("API cache hit for %s", api_cache_key)
+                    self.call_from_thread(self._stop_spinner)
+                    if not worker.is_cancelled:
+                        self.call_from_thread(self._finalize_streaming, cached)
+                    return
 
             for attempt in range(3):
                 if worker.is_cancelled:
@@ -448,6 +486,9 @@ class PoplarApp(App):
                 continue  # Next turn
 
             if content:
+                # Cache the response (only for pure Q&A, no tool calls)
+                if api_cache and api_cache_key and not tool_calls:
+                    api_cache.set(api_cache_key, content, api_cache_ttl, cache_type="api_response")
                 self.call_from_thread(self._finalize_streaming, content)
                 return
             else:

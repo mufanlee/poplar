@@ -1,7 +1,11 @@
 """Tool base types and registry."""
 
+import json
 from dataclasses import dataclass
 from typing import List, Dict, Any
+
+from poplar.persistence.cache import CacheManager, make_key
+from poplar.i18n import get_cache_config
 
 
 @dataclass
@@ -9,6 +13,32 @@ class ToolResult:
     """Result of a tool execution."""
     content: str
     success: bool = True
+
+
+# Lazy-initialized cache manager
+_cache: CacheManager = None
+
+
+def _get_cache() -> CacheManager:
+    global _cache
+    if _cache is None:
+        _cache = CacheManager()
+    return _cache
+
+
+def _cache_enabled() -> bool:
+    return get_cache_config().get("enabled", True)
+
+
+# Cache TTL config keys, keyed by tool name
+_TOOL_CACHE_CONFIG = {
+    "read_file": "tool_read_file_ttl",
+    "list_directory": "tool_list_dir_ttl",
+}
+
+
+def _tool_cache_key(name: str, arguments: Dict[str, Any]) -> str:
+    return make_key("tool", name, json.dumps(arguments, sort_keys=True))
 
 
 TOOL_DEFINITIONS = [
@@ -73,12 +103,38 @@ TOOL_DEFINITIONS = [
 
 
 def execute_tool(name: str, arguments: Dict[str, Any]) -> ToolResult:
-    """Execute a named tool with given arguments."""
+    """Execute a named tool with given arguments, with caching support."""
     from poplar.tools.builtin import BUILTIN_TOOLS
     tool = BUILTIN_TOOLS.get(name)
     if not tool:
         return ToolResult(content=f"Unknown tool: {name}", success=False)
+
+    # --- Cache check for cacheable tools ---
+    cache = _get_cache() if _cache_enabled() else None
+    ttl_key = _TOOL_CACHE_CONFIG.get(name)
+
+    if cache and ttl_key:
+        config = get_cache_config()
+        ttl = config.get(ttl_key, 300)
+        cache_key = _tool_cache_key(name, arguments)
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return ToolResult(content=cached, success=True)
+
+    # --- Execute ---
     try:
-        return tool(arguments)
+        result = tool(arguments)
     except Exception as e:
         return ToolResult(content=f"Tool error: {str(e)}", success=False)
+
+    # --- Post-execution cache ---
+    if cache and ttl_key and result.success:
+        cache.set(cache_key, result.content, ttl, cache_type=f"tool_{name}")
+
+    # --- Invalidate related caches on write_file ---
+    if cache and name == "write_file" and result.success:
+        # Invalidate all read_file caches (the written file may have changed)
+        cache.invalidate("tool:read_file:")
+
+    return result

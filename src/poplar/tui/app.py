@@ -66,7 +66,7 @@ class PoplarApp(App):
         Binding("ctrl+n", "new_session", "New", show=True),
         Binding("ctrl+c", "copy_last", "Copy", show=True),
         Binding("ctrl+d", "delete_session", "Delete", show=False),
-        Binding("escape", "cancel_request", "Cancel", show=False),
+        Binding("escape", "cancel_request", "Cancel", show=True),
     ]
 
     CSS = """
@@ -134,6 +134,8 @@ class PoplarApp(App):
         self._total_tokens = 0
         self._thinking_start_time = 0
         self._streaming = False
+        self._streaming_msg = None
+        self._pending_count = 0
         logger.info("Provider initialized with API key: %s...%s", api_key[:6], api_key[-4:])
 
     def compose(self) -> ComposeResult:
@@ -255,8 +257,6 @@ class PoplarApp(App):
             chat_view = self.query_one(ChatView)
             chat_view.add_message(user_msg)
             self._message_count += 1
-            if not hasattr(self, '_pending_count'):
-                self._pending_count = 0
             self._pending_count += 1
             return
 
@@ -321,35 +321,33 @@ class PoplarApp(App):
 
     def action_cancel_request(self):
         """Cancel ongoing API request when ESC is pressed."""
-        if self._thinking:
+        if self._thinking or self._streaming:
             logger.info("User cancelled API request")
             self._stop_spinner()
             
-            # Cancel the delayed start timer if pending
             if hasattr(self, '_start_timer') and self._start_timer:
                 self._start_timer.stop()
                 self._start_timer = None
             
-            # Cancel the worker if running
             if self._current_worker and self._current_worker.is_running:
                 self._current_worker.cancel()
             
-            # Remove thinking message and any partial streaming message
             chat_view = self.query_one(ChatView)
             self.session.messages = [m for m in self.session.messages if not self._is_thinking_msg(m)]
             chat_view.messages = [m for m in chat_view.messages 
                                  if not self._is_thinking_msg(m) 
-                                 and m is not getattr(self, '_streaming_msg', None)]
+                                 and m is not self._streaming_msg]
             chat_view.chat_display.update_messages(chat_view.messages)
             
-            # Show cancellation message
             cancel_msg = Message(role=Role.SYSTEM, content=t("request_cancelled"))
             self.session.add_message(cancel_msg)
             chat_view.add_message(cancel_msg)
             
             self._streaming = False
+            self._pending_count = 0
             self._update_status_bar()
             self.notify(t("notify_cancelled"))
+            self._check_pending()
 
     def _get_api_messages(self):
         """Get messages for API call, excluding thinking messages."""
@@ -483,9 +481,9 @@ class PoplarApp(App):
             chat_view.messages = chat_view.messages + [self._streaming_msg]
         else:
             # Update or append - don't overwrite if content is shorter (new turn)
-            if hasattr(self, '_streaming_msg'):
+            if self._streaming_msg is not None:
                 self._streaming_msg.content = content
-            elif not hasattr(self, '_streaming_msg'):
+            else:
                 self._streaming_msg = Message(role=Role.ASSISTANT, content=content)
                 chat_view.messages = chat_view.messages + [self._streaming_msg]
             chat_view.messages = chat_view.messages.copy()
@@ -506,7 +504,7 @@ class PoplarApp(App):
 
     def _check_pending(self):
         """If user queued input during streaming, process it now."""
-        count = getattr(self, '_pending_count', 0)
+        count = self._pending_count
         if count > 0:
             self._pending_count = 0
             chat_view = self.query_one(ChatView)

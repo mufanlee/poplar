@@ -36,7 +36,7 @@ class Message:
     def from_dict(cls, data: dict) -> "Message":
         return cls(
             role=Role(data["role"]),
-            content=data.get("content", ""),
+            content=data.get("content") or "",
             tool_calls=data.get("tool_calls"),
             tool_call_id=data.get("tool_call_id"),
             name=data.get("name"),

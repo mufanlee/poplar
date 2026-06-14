@@ -2,7 +2,7 @@
 
 from textual.widgets import Static
 from textual.binding import Binding
-from textual.screen import Screen
+from textual.screen import ModalScreen
 from textual.containers import Vertical
 
 
@@ -20,7 +20,7 @@ _COMMANDS = [
 ]
 
 
-class CommandSuggestion(Screen[str]):
+class CommandSuggestion(ModalScreen[str]):
     """Popup screen showing slash command suggestions."""
 
     BINDINGS = [
@@ -93,6 +93,8 @@ class CommandSuggestion(Screen[str]):
     }
     #cmd-box {
         width: 42;
+        height: auto;
+        max-height: 14;
         background: $surface;
         border: solid $secondary;
         padding: 0 1;

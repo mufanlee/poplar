@@ -54,19 +54,25 @@ class MessageWidget(Static):
         self._build()
 
     def _build(self):
-        """Render the message."""
+        """Render the message with copy hint in title."""
         msg = self._msg
         if msg.role == Role.USER:
+            title = Text()
+            title.append(f"👤 {t('title_you')} ")
+            title.append("[Ctrl+C]", style="dim italic")
             self.update(Panel(
                 Text(msg.content),
-                title=f"👤 {t('title_you')}",
+                title=title,
                 border_style="blue",
                 padding=(0, 1),
             ))
         elif msg.role == Role.ASSISTANT:
+            title = Text()
+            title.append(f"🤖 {t('title_assistant')} ")
+            title.append("[Ctrl+C]", style="dim italic")
             self.update(Panel(
                 Markdown(msg.content),
-                title=f"🤖 {t('title_assistant')}",
+                title=title,
                 border_style="green",
                 padding=(0, 1),
                 expand=False,

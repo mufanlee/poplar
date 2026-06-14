@@ -1,14 +1,12 @@
-"""Chat message display widgets — each message is individually clickable for copy."""
+"""Chat message display widgets — each message with a copy button."""
 
 from textual.widgets import Static
-from textual.containers import ScrollableContainer
-from textual.message import Message as TMessage
+from textual.containers import ScrollableContainer, Horizontal
 from textual.reactive import reactive
 from rich.align import Align
 from rich.text import Text
 from rich.panel import Panel
 from rich.markdown import Markdown
-from rich.console import Group
 from poplar.core.session import Message, Role
 from poplar.i18n import t
 
@@ -47,22 +45,15 @@ def build_welcome():
     return Align.center(panel)
 
 
-class MessageCopied(TMessage):
-    """Posted when a message is clicked for copying."""
-    def __init__(self, content: str):
-        self.content = content
-        super().__init__()
-
-
-class MessageWidget(Static):
-    """A single clickable chat message."""
+class MessageContent(Static):
+    """Renders the message body (Panel / Text)."""
 
     def __init__(self, message: Message):
         super().__init__()
         self._msg = message
-        self._build_renderable()
+        self._build()
 
-    def _build_renderable(self):
+    def _build(self):
         msg = self._msg
         if msg.role == Role.USER:
             self.update(Panel(
@@ -89,21 +80,56 @@ class MessageWidget(Static):
                 lines.append(f"  {line}")
             self.update(Text("\n".join(lines), style="dim"))
 
+
+class CopyButton(Static):
+    """A small clickable copy button shown at top-right of each message."""
+
+    def __init__(self, parent_widget):
+        super().__init__("📋")
+        self._parent = parent_widget
+
     def on_click(self):
-        """Click to copy message content to clipboard."""
-        content = self._msg.content
+        """Copy the parent message content to clipboard."""
+        content = self._parent._msg.content
         if content:
             self.app.copy_to_clipboard(content)
             self.app.notify(f"📋 Copied: {content[:60]}...")
+
+    DEFAULT_CSS = """
+    CopyButton {
+        width: 3;
+        height: 1;
+        padding: 0 0 0 0;
+        text-align: center;
+        background: $surface-darken-2;
+    }
+    CopyButton:hover {
+        background: $accent;
+        color: $text;
+    }
+    """
+
+
+class MessageWidget(Static):
+    """A single chat message: Panel + copy button at top-right."""
+
+    def __init__(self, message: Message):
+        super().__init__()
+        self._msg = message
+
+    def compose(self):
+        with Horizontal():
+            yield MessageContent(self._msg)
+            yield CopyButton(self)
 
     DEFAULT_CSS = """
     MessageWidget {
         height: auto;
         margin: 0 0 0 0;
     }
-    MessageWidget:hover {
-        /* Slight brightness change on hover to indicate clickability */
-        background: $boost;
+    MessageContent {
+        height: auto;
+        width: 1fr;
     }
     """
 
@@ -124,7 +150,7 @@ class WelcomeWidget(Static):
 
 
 class ChatView(ScrollableContainer):
-    """Scrollable container for chat messages. Each message is clickable."""
+    """Scrollable container for chat messages. Each message has a copy button."""
 
     messages: reactive[list] = reactive([], init=False)
 
@@ -181,7 +207,7 @@ class ChatView(ScrollableContainer):
 
     def update_message_widget(self, predicate, make_message):
         """Find the first MessageWidget matching predicate and update its content.
-        
+
         Args:
             predicate: callable(MessageWidget) -> bool
             make_message: callable(MessageWidget) -> Message, returns updated message
@@ -190,7 +216,10 @@ class ChatView(ScrollableContainer):
             if isinstance(child, MessageWidget) and predicate(child):
                 new_msg = make_message(child)
                 child._msg = new_msg
-                child._build_renderable()
+                # Update the MessageContent child
+                for sub in child.query(MessageContent):
+                    sub._msg = new_msg
+                    sub._build()
                 return
-        # Fallback: didn't find it, trigger full rebuild
+        # Fallback: trigger full rebuild
         self.messages = list(self.messages)

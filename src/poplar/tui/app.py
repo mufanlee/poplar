@@ -3,7 +3,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Footer, Header, Static
 from textual.worker import Worker, get_current_worker
-from poplar.tui.chat_view import ChatView
+from poplar.tui.chat_view import ChatView, MessageWidget
 from poplar.tui.composer import Composer, ComposerSubmit
 from poplar.tui.session_picker import SessionPicker
 from poplar.core.session import Session, Message, Role

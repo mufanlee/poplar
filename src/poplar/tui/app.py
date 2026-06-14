@@ -9,6 +9,10 @@ from poplar.tui.session_picker import SessionPicker
 from poplar.core.session import Session, Message, Role
 from poplar.providers import create_provider, get_available_providers
 from poplar.i18n import t, get_cache_config, get_context_config, get_active_provider_name, get_provider_config
+from poplar.persistence.store import SessionStore
+from poplar.tools.base import TOOL_DEFINITIONS, execute_tool
+from poplar.persistence.cache import CacheManager, hash_messages
+from poplar.core.context import ContextManager
 import os
 import json
 import logging

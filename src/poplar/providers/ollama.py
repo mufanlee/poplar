@@ -15,9 +15,6 @@ class OllamaProvider:
         self.base_url = base_url.rstrip("/")
         self.model = model
 
-        for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']:
-            os.environ.pop(var, None)
-
     def _api_url(self, path: str) -> str:
         return f"{self.base_url}{path}"
 

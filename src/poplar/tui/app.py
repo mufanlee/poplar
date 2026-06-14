@@ -147,6 +147,7 @@ class PoplarApp(App):
             # Count non-system messages on load
             self._message_count = sum(1 for m in self.session.messages if m.role != Role.SYSTEM)
             self._first_message = self._message_count == 0
+            self._total_tokens = self.context_mgr.get_cumulative_token_count(self.session)
             logger.info("Loaded existing session: %s (%d messages)", self.session.id, self._message_count)
         else:
             self.session = self.store.create_session(title="New Chat")
@@ -551,6 +552,12 @@ class PoplarApp(App):
                     self.call_from_thread(self._show_error, "Empty response from API")
                 return
 
+        # Exhausted max_turns — model returned only tool_calls, no text
+        logger.warning("Max turns (%d) reached without content response", max_turns)
+        if not worker.is_cancelled:
+            self.call_from_thread(self._finalize_streaming,
+                                  "Tool execution completed. You can continue the conversation.")
+
     def _is_retryable(self, error_msg: str) -> bool:
         """Check if an API error is retryable (network, rate limit, server error)."""
         retryable = ["timeout", "connection", "rate_limit", "server_error", "503", "502", "429", "overloaded"]
@@ -903,7 +910,7 @@ class PoplarApp(App):
             self.session = self.store.get_session(new_session.id)
             self._message_count = sum(1 for m in self.session.messages if m.role != Role.SYSTEM)
             self._first_message = self._message_count == 0
-            self._total_tokens = 0
+            self._total_tokens = self.context_mgr.get_cumulative_token_count(self.session)
             chat_view = self.query_one(ChatView)
             chat_view.messages = list(self.session.messages)
             self._update_status_bar()
@@ -917,8 +924,11 @@ class PoplarApp(App):
         """Check if a message is a thinking/spinner indicator."""
         if m.role != Role.SYSTEM:
             return False
-        content_lower = m.content.lower()
-        return "thinking" in content_lower or t("thinking").lower() in content_lower
+        content = m.content
+        # Spinner messages contain a braille spinner frame + translated "Thinking"
+        spinner_chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠉"
+        return bool(content and any(char in content for char in spinner_chars) and
+                   (t("thinking").lower() in content.lower()))
 
     def _show_error(self, error: str):
         """Called on main thread when API call fails."""

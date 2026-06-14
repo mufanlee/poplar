@@ -13,9 +13,6 @@ class DeepSeekProvider:
         self.model: str = model
         self._client = None
 
-        for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']:
-            os.environ.pop(var, None)
-
     @property
     def client(self):
         if self._client is None:

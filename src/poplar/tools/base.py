@@ -1,11 +1,14 @@
 """Tool base types and registry."""
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import List, Dict, Any
 
 from poplar.persistence.cache import CacheManager, make_key
 from poplar.i18n import get_cache_config
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -120,7 +123,10 @@ def execute_tool(name: str, arguments: Dict[str, Any]) -> ToolResult:
 
         cached = cache.get(cache_key)
         if cached is not None:
-            return ToolResult(content=cached, success=True)
+            logger.info("Tool cache hit: %s", cache_key)
+            result = ToolResult(content=cached, success=True)
+            result._cached = True
+            return result
 
     # --- Execute ---
     try:

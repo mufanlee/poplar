@@ -404,6 +404,7 @@ class PoplarApp(App):
                     self.call_from_thread(self._stop_spinner)
                     if not worker.is_cancelled:
                         self.call_from_thread(self._finalize_streaming, cached)
+                        self.call_from_thread(self.notify, "📦 [dim]Cached response[/dim]")
                     return
 
             for attempt in range(3):
@@ -473,6 +474,8 @@ class PoplarApp(App):
                     except json.JSONDecodeError:
                         args = {}
                     result = execute_tool(name, args)
+                    # Visual marker for cached tool results
+                    display_content = f"[dim][cached][/dim] {result.content}" if getattr(result, '_cached', False) else result.content
                     tool_msg = Message(
                         role=Role.TOOL,
                         content=result.content,
@@ -481,7 +484,7 @@ class PoplarApp(App):
                     )
                     self.session.add_message(tool_msg)
                     self.store.save_message(self.session.id, tool_msg)
-                    self.call_from_thread(self._show_tool_result, name, result.content)
+                    self.call_from_thread(self._show_tool_result, name, display_content)
 
                 continue  # Next turn
 

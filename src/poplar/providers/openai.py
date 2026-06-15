@@ -20,7 +20,15 @@ class OpenAIProvider:
     @property
     def client(self):
         if self._client is None:
-            self._client = openai.OpenAI(api_key=self.api_key, base_url=self.base_url)
+            saved = {}
+            for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']:
+                saved[var] = os.environ.pop(var, None)
+            try:
+                self._client = openai.OpenAI(api_key=self.api_key, base_url=self.base_url)
+            finally:
+                for var, val in saved.items():
+                    if val is not None:
+                        os.environ[var] = val
         return self._client
 
     def chat(self, messages: List[Message], **kwargs) -> ChatResponse:

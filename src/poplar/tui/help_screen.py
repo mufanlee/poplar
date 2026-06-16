@@ -37,9 +37,10 @@ class HelpScreen(ModalScreen[None]):
     def action_dismiss_help(self):
         self.dismiss(None)
 
-    DEFAULT_CSS = """
+    CSS = """
     HelpScreen {
         align: center middle;
+        background: rgba(0,0,0,0.4);
     }
     #help-box {
         width: 50;

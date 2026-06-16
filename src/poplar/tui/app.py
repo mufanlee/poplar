@@ -763,16 +763,19 @@ class PoplarApp(App):
         )
 
         lines = [
-            f"[bold]📊 Context Info[/bold]",
-            f"Model: {self.provider.model}",
-            f"Messages: {total_msgs} total ({user_msgs} user, {assistant_msgs} assistant, {system_msgs} system, {tool_msgs} tool)",
-            f"Token estimate: {token_est} / {self.context_mgr.max_tokens} ({pct}%)",
-            f"Auto-compress threshold: {threshold} tokens ({int(self.context_mgr.auto_compress_at * 100)}%)",
-            f"Keep recent: {self.context_mgr.keep_recent_exchanges} exchanges",
-            f"Has summary: {'✅' if has_summary else '❌'}",
-            f"Total tokens (tracked): {self._total_tokens}",
+            "**📊 Context Info**",
             "",
-            f"[dim]/compress — manually compress[/dim]",
+            f"| Item | Value |",
+            f"|------|-------|",
+            f"| Model | {self.provider.model} |",
+            f"| Messages | {total_msgs} total ({user_msgs} user, {assistant_msgs} assistant, {system_msgs} system, {tool_msgs} tool) |",
+            f"| Token estimate | {token_est} / {self.context_mgr.max_tokens} ({pct}%) |",
+            f"| Auto-compress at | {threshold} tokens ({int(self.context_mgr.auto_compress_at * 100)}%) |",
+            f"| Keep recent | {self.context_mgr.keep_recent_exchanges} exchanges |",
+            f"| Has summary | {'✅' if has_summary else '❌'} |",
+            f"| Tracked tokens | {self._total_tokens} |",
+            "",
+            "*/compress — manually compress*",
         ]
 
         msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
@@ -809,9 +812,9 @@ class PoplarApp(App):
         if text.strip() == "/":
             return
         lines = [
-            f"[red]Unknown command: {text.split()[0]}[/red]",
+            f"**Unknown command: {text.split()[0]}**",
             "",
-            "Try [bold]/help[/bold] to see available commands.",
+            "Try **/help** to see available commands.",
         ]
         msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
         self.session.add_message(msg)
@@ -828,12 +831,12 @@ class PoplarApp(App):
         if cmd == "list":
             available = get_available_providers()
             current = self._provider_name
-            lines = ["[bold]Available providers:[/bold]"]
+            lines = ["**Available providers:**"]
             for name in available:
                 marker = "●" if name == current else "○"
                 lines.append(f"  {marker} {name}")
-            lines.append(f"\n[dim]Usage: /provider set <name>[/dim]")
-            msg = Message(role=Role.SYSTEM, content="\n".join(lines))
+            lines.append(f"\n*Usage: /provider set <name>*")
+            msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
             chat_view = self.query_one(ChatView)
             chat_view.add_message(msg)
             chat_view.scroll_end(animate=False)
@@ -850,13 +853,13 @@ class PoplarApp(App):
             models = self.provider.get_models()
             model_list = ", ".join(m.id for m in models)
             lines = [
-                f"[bold]Current provider: {self._provider_name}[/bold]",
+                f"**Current provider: {self._provider_name}**",
                 f"Model: {self.provider.model}",
                 f"Available models: {model_list}",
                 "",
-                f"[dim]Commands: /provider list, /provider set <name>[/dim]",
+                "*Commands: /provider list, /provider set <name>*",
             ]
-            msg = Message(role=Role.SYSTEM, content="\n".join(lines))
+            msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
             chat_view = self.query_one(ChatView)
             chat_view.add_message(msg)
             chat_view.scroll_end(animate=False)
@@ -970,7 +973,7 @@ class PoplarApp(App):
         chat_view._rebuild(self.session.messages)
 
         # Show error as assistant message (mount directly, session already has it)
-        error_msg = Message(role=Role.ASSISTANT, content=f"[red]{t('error')}: {error}[/red]")
+        error_msg = Message(role=Role.ASSISTANT, content=f"**{t('error')}: {error}**")
         self.session.add_message(error_msg)
         self.store.save_message(self.session.id, error_msg)
         # Rebuild to display error

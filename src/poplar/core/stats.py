@@ -69,13 +69,15 @@ class StatsCollector:
         rate = self.cache_hit_rate * 100
 
         return (
-            f"[bold]📊 Session Stats[/bold]\n\n"
-            f"API calls: {self.api_calls} ({success} success, {self.api_errors} errors)\n"
-            f"Avg latency: {self.avg_latency_ms:.0f} ms\n"
-            f"Tokens: {self.total_tokens} total ({self.tokens_prompt} prompt, {self.tokens_completion} completion)\n"
-            f"Cache: {self.cache_hits + self.cache_misses} total ({self.cache_hits} hits, {self.cache_misses} misses, {rate:.0f}% hit)\n"
-            f"Tool calls: {self.tool_calls}\n"
-            f"Messages: {self.messages_sent} sent, {self.messages_received} received\n"
+            "**📊 Session Stats**\n\n"
+            f"| Metric | Value |\n"
+            f"|--------|-------|\n"
+            f"| API calls | {self.api_calls} ({success} success, {self.api_errors} errors) |\n"
+            f"| Avg latency | {self.avg_latency_ms:.0f} ms |\n"
+            f"| Tokens | {self.total_tokens} ({self.tokens_prompt} prompt, {self.tokens_completion} completion) |\n"
+            f"| Cache | {self.cache_hits + self.cache_misses} total ({self.cache_hits} hits, {self.cache_misses} misses, {rate:.0f}% hit) |\n"
+            f"| Tool calls | {self.tool_calls} |\n"
+            f"| Messages | {self.messages_sent} sent, {self.messages_received} received |\n"
         )
 
 

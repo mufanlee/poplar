@@ -44,7 +44,7 @@ class Composer(Widget):
     def on_key(self, event):
         suggest = self.query_one(CommandSuggestion)
         if suggest.is_visible:
-            if event.key == "enter" or event.key == "tab":
+            if event.key == "tab":
                 event.stop()
                 cmd, _ = suggest._selected()
                 suggest.hide()
@@ -76,6 +76,14 @@ class Composer(Widget):
             self.query_one(TextArea).insert("\n")
 
     def action_send(self):
+        suggest = self.query_one(CommandSuggestion)
+        if suggest.is_visible:
+            cmd, _ = suggest._selected()
+            suggest.hide()
+            if cmd:
+                self.query_one(TextArea).clear()
+                self.post_message(ComposerSubmit(text=cmd))
+            return
         textarea = self.query_one(TextArea)
         text = textarea.text.strip()
         if text:

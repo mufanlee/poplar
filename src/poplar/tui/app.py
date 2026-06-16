@@ -783,27 +783,18 @@ class PoplarApp(App):
     def _show_help(self):
         """Show all available commands."""
         lines = [
-            "[bold]Available Commands[/bold]",
+            "[bold]Commands[/bold]",
             "",
-            "[bold]Session[/bold]",
-            "  /context            — Show session context info",
-            "  /compress           — Compress conversation via LLM summarization",
-            "  /export <path>      — Export session to JSON file",
-            "  /import <path>      — Import session from JSON file",
-            "",
-            "[bold]Provider[/bold]",
-            "  /provider           — Show current provider",
-            "  /provider list      — List available providers",
-            "  /provider set <name> — Switch provider (deepseek/openai/anthropic/ollama)",
-            "",
-            "[bold]Stats[/bold]",
-            "  /stats              — Show performance statistics",
-            "",
-            "[bold]Help[/bold]",
-            "  /help               — Show this help",
-            "  /quit               — Exit application",
-            "",
-            "[dim]Type /help to see this again[/dim]",
+            "  /help               Show this",
+            "  /quit               Exit application",
+            "  /context            Session context info",
+            "  /compress           Summarize conversation",
+            "  /stats              Performance statistics",
+            "  /export <path>      Export session to JSON",
+            "  /import <path>      Import session from JSON",
+            "  /provider           Show current provider",
+            "  /provider list      List all providers",
+            "  /provider set <n>   Switch provider",
         ]
         msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
         self.session.add_message(msg)

@@ -42,10 +42,10 @@ class Composer(Widget):
             suggest.hide()
 
     def on_command_selected(self, event: CommandSelected):
-        """Fill the input with the selected command."""
+        """Fill and send the selected command."""
         textarea = self.query_one(TextArea)
         textarea.text = event.command + " "  # type: ignore[assignment]
-        textarea.focus()
+        self.action_send()
 
     def on_key(self, event):
         suggest = self.query_one(CommandSuggestion)

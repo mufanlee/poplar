@@ -40,6 +40,7 @@ class HelpScreen(ModalScreen[None]):
     DEFAULT_CSS = """
     HelpScreen {
         align: center middle;
+        background: transparent;
     }
     #help-box {
         width: 48;

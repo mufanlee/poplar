@@ -36,7 +36,7 @@ class Composer(Widget):
         text = event.text_area.text.strip()
         suggest = self.query_one(CommandSuggestion)
 
-        if text.startswith("/") and len(text) <= 2:
+        if text.startswith("/"):
             suggest.show(text)
         else:
             suggest.hide()

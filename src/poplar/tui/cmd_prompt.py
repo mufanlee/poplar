@@ -53,8 +53,10 @@ class CommandSuggestion(Vertical):
 
     def show(self, filter_text: str):
         """Show the command popup with the given filter."""
-        self._filter = filter_text.lower()
-        self._index = 0
+        new_filter = filter_text.lower()
+        if new_filter != self._filter:
+            self._index = 0
+        self._filter = new_filter
         self._visible = True
         self.styles.display = "block"
         self._render_list()

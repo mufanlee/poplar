@@ -755,23 +755,28 @@ class PoplarApp(App):
             f"[dim]/compress — manually compress[/dim]",
         ]
 
-        msg = Message(role=Role.SYSTEM, content="\n".join(lines))
+        msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
+        self.session.add_message(msg)
+        self.store.save_message(self.session.id, msg)
         chat_view = self.query_one(ChatView)
         chat_view.add_message(msg)
         chat_view.scroll_end(animate=False)
 
     def _show_stats(self):
         """Show performance statistics."""
-        msg = Message(role=Role.SYSTEM, content=stats.report())
+        msg = Message(role=Role.ASSISTANT, content=stats.report())
+        self.session.add_message(msg)
+        self.store.save_message(self.session.id, msg)
         chat_view = self.query_one(ChatView)
         chat_view.add_message(msg)
         chat_view.scroll_end(animate=False)
 
     def _show_cmd_result(self, content: str):
         """Display a command result — first echo the command as user message, then the result."""
+        msg = Message(role=Role.ASSISTANT, content=content)
+        self.session.add_message(msg)
+        self.store.save_message(self.session.id, msg)
         chat_view = self.query_one(ChatView)
-        # Don't add to session — ephemeral display
-        msg = Message(role=Role.SYSTEM, content=content)
         chat_view.add_message(msg)
         chat_view.scroll_end(animate=False)
 
@@ -800,7 +805,9 @@ class PoplarApp(App):
             "",
             "[dim]Type /help to see this again[/dim]",
         ]
-        msg = Message(role=Role.SYSTEM, content="\n".join(lines))
+        msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
+        self.session.add_message(msg)
+        self.store.save_message(self.session.id, msg)
         chat_view = self.query_one(ChatView)
         chat_view.add_message(msg)
         chat_view.scroll_end(animate=False)
@@ -814,7 +821,9 @@ class PoplarApp(App):
             "",
             "Try [bold]/help[/bold] to see available commands.",
         ]
-        msg = Message(role=Role.SYSTEM, content="\n".join(lines))
+        msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
+        self.session.add_message(msg)
+        self.store.save_message(self.session.id, msg)
         chat_view = self.query_one(ChatView)
         chat_view.add_message(msg)
         chat_view.scroll_end(animate=False)

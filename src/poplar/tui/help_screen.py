@@ -1,4 +1,4 @@
-"""Help screen showing available commands."""
+"""Help popup — shows available commands."""
 
 from textual.screen import ModalScreen
 from textual.widgets import Static
@@ -32,7 +32,7 @@ class HelpScreen(ModalScreen[None]):
                 ]),
                 id="help-body",
             )
-            yield Static("[dim]Press Esc or Q to close[/dim]", id="help-footer")
+            yield Static("[dim]Press Esc to close[/dim]", id="help-footer")
 
     def action_dismiss_help(self):
         self.dismiss(None)
@@ -41,12 +41,10 @@ class HelpScreen(ModalScreen[None]):
     HelpScreen {
         align: center middle;
         background: rgba(0,0,0,0.4);
-        height: auto;
     }
     #help-box {
-        width: 48;
+        width: 50;
         height: auto;
-        max-height: 80%;
         background: $surface;
         border: solid $secondary;
         padding: 1 2;

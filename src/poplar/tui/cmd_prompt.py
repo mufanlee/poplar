@@ -19,7 +19,7 @@ class CommandSuggestion(Vertical):
         ("/import ", "Import session from JSON"),
         ("/provider", "Show current provider"),
         ("/provider list", "List all providers"),
-        ("/provider set ", "Switch provider"),
+        ("/provider set", "Switch provider"),
     ]
 
     def __init__(self, **kwargs):

@@ -49,9 +49,8 @@ class Composer(Widget):
                 cmd, _ = suggest._selected()
                 suggest.hide()
                 if cmd:
-                    textarea = self.query_one(TextArea)
-                    textarea.text = cmd + " "  # type: ignore[assignment]
-                    self.action_send()
+                    self.query_one(TextArea).clear()
+                    self.post_message(ComposerSubmit(text=cmd))
                 return
             elif event.key == "up":
                 event.stop()

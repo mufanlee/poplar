@@ -121,7 +121,6 @@ class SessionPicker(ModalScreen[str | None]):
     CSS = """
     SessionPicker {
         align: center middle;
-        background: rgba(0,0,0,0.4);
     }
 
     #picker-box {

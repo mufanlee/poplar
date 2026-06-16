@@ -5,7 +5,7 @@ from textual.widgets import TextArea
 from textual.binding import Binding
 from textual.message import Message
 from poplar.i18n import t
-from poplar.tui.cmd_prompt import CommandSuggestion, CommandSelected
+from poplar.tui.cmd_prompt import CommandSuggestion
 
 
 class ComposerSubmit(Message):
@@ -41,18 +41,17 @@ class Composer(Widget):
         else:
             suggest.hide()
 
-    def on_command_selected(self, event: CommandSelected):
-        """Fill and send the selected command."""
-        textarea = self.query_one(TextArea)
-        textarea.text = event.command + " "  # type: ignore[assignment]
-        self.action_send()
-
     def on_key(self, event):
         suggest = self.query_one(CommandSuggestion)
         if suggest.is_visible:
             if event.key == "enter" or event.key == "tab":
                 event.stop()
-                suggest.action_select()
+                cmd, _ = suggest._selected()
+                suggest.hide()
+                if cmd:
+                    textarea = self.query_one(TextArea)
+                    textarea.text = cmd + " "  # type: ignore[assignment]
+                    self.action_send()
                 return
             elif event.key == "up":
                 event.stop()

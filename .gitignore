@@ -30,3 +30,4 @@ poplar.log
 .coverage
 .poplar/
 .reasonix/
+poplar-session-*.json

@@ -1,28 +1,11 @@
 """Command suggestion popup for slash commands — mounted as widget above composer."""
 
 from textual.widgets import Static
-from textual.binding import Binding
 from textual.containers import Vertical
-from textual.message import Message
-
-
-class CommandSelected(Message):
-    """Posted when user selects a command from the suggestion list."""
-
-    def __init__(self, command: str):
-        self.command = command
-        super().__init__()
 
 
 class CommandSuggestion(Vertical):
     """Slash command suggestion popup, shown above the composer."""
-
-    BINDINGS = [
-        Binding("escape", "dismiss", "Cancel", show=False, priority=True),
-        Binding("tab", "select", "Complete", show=False, priority=True),
-        Binding("up", "nav_up", "", show=False, priority=True),
-        Binding("down", "nav_down", "", show=False, priority=True),
-    ]
 
     _COMMANDS = [
         ("/help", "Show available commands"),
@@ -102,12 +85,6 @@ class CommandSuggestion(Vertical):
         if items:
             self._index = (self._index + 1) % len(items)
             self._render_list()
-
-    def action_select(self):
-        cmd, _ = self._selected()
-        if cmd:
-            self.post_message(CommandSelected(cmd))
-            self.hide()
 
     def action_dismiss(self):
         self.hide()

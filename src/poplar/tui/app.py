@@ -831,11 +831,10 @@ class PoplarApp(App):
         if cmd == "list":
             available = get_available_providers()
             current = self._provider_name
-            lines = ["**Available providers:**"]
+            lines = ["| Provider | Status |", "|----------|--------|"]
             for name in available:
-                marker = "●" if name == current else "○"
-                lines.append(f"  {marker} {name}")
-            lines.append(f"\n*Usage: /provider set <name>*")
+                marker = "● active" if name == current else "○"
+                lines.append(f"| {name} | {marker} |")
             msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
             chat_view = self.query_one(ChatView)
             chat_view.add_message(msg)
@@ -849,16 +848,15 @@ class PoplarApp(App):
             self._switch_provider(name)
 
         else:
-            # Show current provider info
             models = self.provider.get_models()
-            model_list = ", ".join(m.id for m in models)
             lines = [
-                f"**Current provider: {self._provider_name}**",
-                f"Model: {self.provider.model}",
-                f"Available models: {model_list}",
+                f"**{self._provider_name}** · `{self.provider.model}`",
                 "",
-                "*Commands: /provider list, /provider set <name>*",
+                "| Model |",
+                "|-------|",
             ]
+            for m in models:
+                lines.append(f"| {m.id} |")
             msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
             chat_view = self.query_one(ChatView)
             chat_view.add_message(msg)

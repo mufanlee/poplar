@@ -25,7 +25,7 @@ class CommandSuggestion(Vertical):
     ]
 
     _COMMANDS = [
-        ("/help", "Show available commands"),
+        ("/session", "Manage sessions"),
         ("/quit", "Exit application"),
         ("/context", "Show session context"),
         ("/compress", "Compress conversation"),

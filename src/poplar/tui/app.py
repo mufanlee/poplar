@@ -293,7 +293,7 @@ class PoplarApp(App):
         text = event.text.strip()
 
         # Handle /commands — echo as user message (skip pure UI commands)
-        if text.startswith("/") and text not in ("/help", "/quit"):
+        if text.startswith("/") and text not in ("/help", "/quit", "/session"):
             chat_view = self.query_one(ChatView)
             user_msg = Message(role=Role.USER, content=event.text)
             self.session.add_message(user_msg)
@@ -302,6 +302,9 @@ class PoplarApp(App):
 
         if text == "/help":
             self._show_help()
+            return
+        if text == "/session":
+            self.action_session_picker()
             return
         if text == "/quit":
             self.exit()

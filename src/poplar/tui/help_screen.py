@@ -21,7 +21,7 @@ class HelpScreen(ModalScreen[None]):
                 "\n".join([
                     "/help               Show this",
                     "/quit               Exit application",
-                    "/session            Manage sessions",
+                    "/clear              Clear current session",
                     "/context            Session context info",
                     "/compress           Summarize conversation",
                     "/stats              Performance statistics",

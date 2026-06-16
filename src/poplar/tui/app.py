@@ -280,6 +280,19 @@ class PoplarApp(App):
                 self._update_status_bar()
         self.notify(t("session_deleted"))
 
+    def _clear_session(self):
+        """Clear all messages from the current session."""
+        logger.info("Clearing session: %s", self.session.id)
+        self.store.delete_session(self.session.id)
+        self.session = self.store.create_session(session_id=self.session.id, title="New Chat")
+        self._message_count = 0
+        self._first_message = True
+        self._total_tokens = 0
+        chat_view = self.query_one(ChatView)
+        chat_view.messages = []
+        self._update_status_bar()
+        self.notify("Session cleared")
+
     def _update_status_bar(self):
         """Update the status bar display."""
         try:
@@ -293,7 +306,7 @@ class PoplarApp(App):
         text = event.text.strip()
 
         # Handle /commands — echo as user message (skip pure UI commands)
-        if text.startswith("/") and text not in ("/help", "/quit", "/session"):
+        if text.startswith("/") and text not in ("/help", "/quit", "/session", "/clear"):
             chat_view = self.query_one(ChatView)
             user_msg = Message(role=Role.USER, content=event.text)
             self.session.add_message(user_msg)
@@ -305,6 +318,9 @@ class PoplarApp(App):
             return
         if text == "/session":
             self.action_session_picker()
+            return
+        if text == "/clear":
+            self._clear_session()
             return
         if text == "/quit":
             self.exit()

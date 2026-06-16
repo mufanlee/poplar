@@ -25,7 +25,7 @@ class CommandSuggestion(Vertical):
     ]
 
     _COMMANDS = [
-        ("/session", "Manage sessions"),
+        ("/clear", "Clear current session"),
         ("/quit", "Exit application"),
         ("/context", "Show session context"),
         ("/compress", "Compress conversation"),

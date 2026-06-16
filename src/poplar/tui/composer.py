@@ -65,6 +65,7 @@ class Composer(Widget):
             elif event.key == "escape":
                 event.stop()
                 suggest.action_dismiss()
+                self.query_one(TextArea).clear()
                 return
         if event.key == "enter":
             event.stop()

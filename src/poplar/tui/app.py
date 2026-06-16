@@ -791,7 +791,9 @@ class PoplarApp(App):
         chat_view.scroll_end(animate=False)
 
     def _show_unknown_command(self, text: str):
-        """Show help when an unknown command is typed."""
+        """Show help when an unknown command is typed. Silently ignore bare '/'."""
+        if text.strip() == "/":
+            return
         lines = [
             f"[red]Unknown command: {text.split()[0]}[/red]",
             "",

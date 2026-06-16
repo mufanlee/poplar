@@ -41,10 +41,12 @@ class HelpScreen(ModalScreen[None]):
     HelpScreen {
         align: center middle;
         background: rgba(0,0,0,0.4);
+        height: auto;
     }
     #help-box {
         width: 48;
         height: auto;
+        max-height: 80%;
         background: $surface;
         border: solid $secondary;
         padding: 1 2;

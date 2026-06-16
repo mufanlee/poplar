@@ -6,6 +6,7 @@ from textual.worker import Worker, get_current_worker
 from poplar.tui.chat_view import ChatView, MessageWidget
 from poplar.tui.composer import Composer, ComposerSubmit
 from poplar.tui.session_picker import SessionPicker
+from poplar.tui.help_screen import HelpScreen
 from poplar.core.session import Session, Message, Role
 from poplar.providers import create_provider, get_available_providers
 from poplar.i18n import t, get_cache_config, get_context_config, get_active_provider_name, get_provider_config
@@ -291,8 +292,8 @@ class PoplarApp(App):
         """Handle user message submission."""
         text = event.text.strip()
 
-        # Handle /commands — echo as user message first
-        if text.startswith("/"):
+        # Handle /commands — echo as user message (skip pure UI commands)
+        if text.startswith("/") and text not in ("/help", "/quit"):
             chat_view = self.query_one(ChatView)
             user_msg = Message(role=Role.USER, content=event.text)
             self.session.add_message(user_msg)
@@ -781,29 +782,8 @@ class PoplarApp(App):
         chat_view.scroll_end(animate=False)
 
     def _show_help(self):
-        """Show all available commands."""
-        lines = [
-            "**Commands**",
-            "",
-            "| Command | Description |",
-            "|---------|-------------|",
-            "| `/help` | Show this |",
-            "| `/quit` | Exit application |",
-            "| `/context` | Session context info |",
-            "| `/compress` | Summarize conversation |",
-            "| `/stats` | Performance statistics |",
-            "| `/export <path>` | Export session to JSON |",
-            "| `/import <path>` | Import session from JSON |",
-            "| `/provider` | Show current provider |",
-            "| `/provider list` | List all providers |",
-            "| `/provider set <n>` | Switch provider |",
-        ]
-        msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
-        self.session.add_message(msg)
-        self.store.save_message(self.session.id, msg)
-        chat_view = self.query_one(ChatView)
-        chat_view.add_message(msg)
-        chat_view.scroll_end(animate=False)
+        """Show help as a modal popup."""
+        self.push_screen(HelpScreen())
 
     def _show_unknown_command(self, text: str):
         """Show help when an unknown command is typed. Silently ignore bare '/'."""

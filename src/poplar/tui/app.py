@@ -291,7 +291,14 @@ class PoplarApp(App):
         """Handle user message submission."""
         text = event.text.strip()
 
-        # Handle /commands
+        # Handle /commands — echo as user message first
+        if text.startswith("/"):
+            chat_view = self.query_one(ChatView)
+            user_msg = Message(role=Role.USER, content=event.text)
+            self.session.add_message(user_msg)
+            self.store.save_message(self.session.id, user_msg)
+            chat_view.add_message(user_msg)
+
         if text == "/help":
             self._show_help()
             return
@@ -757,6 +764,14 @@ class PoplarApp(App):
         """Show performance statistics."""
         msg = Message(role=Role.SYSTEM, content=stats.report())
         chat_view = self.query_one(ChatView)
+        chat_view.add_message(msg)
+        chat_view.scroll_end(animate=False)
+
+    def _show_cmd_result(self, content: str):
+        """Display a command result — first echo the command as user message, then the result."""
+        chat_view = self.query_one(ChatView)
+        # Don't add to session — ephemeral display
+        msg = Message(role=Role.SYSTEM, content=content)
         chat_view.add_message(msg)
         chat_view.scroll_end(animate=False)
 

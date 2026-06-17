@@ -91,13 +91,14 @@ class CommandSuggestion(Vertical):
 
     DEFAULT_CSS = """
     CommandSuggestion {
-        height: auto;
+        height: 14;
         width: 42;
         margin: 0 0 0 1;
         background: $surface;
         border: solid $secondary;
         padding: 0 1;
         display: none;
+        overflow-y: auto;
     }
     #cmd-title {
         background: $primary-darken-2;

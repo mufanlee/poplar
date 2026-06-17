@@ -22,7 +22,6 @@ class Composer(Widget):
     ]
 
     def compose(self):
-        yield CommandSuggestion(id="cmd-suggest")
         yield TextArea(id="input")
 
     def on_mount(self):
@@ -34,7 +33,7 @@ class Composer(Widget):
     def on_text_area_changed(self, event: TextArea.Changed):
         """Show or hide command suggestions when '/' is typed."""
         text = event.text_area.text.strip()
-        suggest = self.query_one(CommandSuggestion)
+        suggest = self.app.query_one(CommandSuggestion)
 
         if text.startswith("/"):
             suggest.show(text)
@@ -42,7 +41,7 @@ class Composer(Widget):
             suggest.hide()
 
     def on_key(self, event):
-        suggest = self.query_one(CommandSuggestion)
+        suggest = self.app.query_one(CommandSuggestion)
         if suggest.is_visible:
             if event.key == "tab":
                 event.stop()
@@ -76,7 +75,7 @@ class Composer(Widget):
             self.query_one(TextArea).insert("\n")
 
     def action_send(self):
-        suggest = self.query_one(CommandSuggestion)
+        suggest = self.app.query_one(CommandSuggestion)
         if suggest.is_visible:
             cmd, _ = suggest._selected()
             suggest.hide()

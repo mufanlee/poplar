@@ -7,6 +7,7 @@ from poplar.tui.chat_view import ChatView, MessageWidget
 from poplar.tui.composer import Composer, ComposerSubmit
 from poplar.tui.session_picker import SessionPicker
 from poplar.tui.help_screen import HelpScreen
+from poplar.tui.cmd_prompt import CommandSuggestion
 from poplar.core.session import Session, Message, Role
 from poplar.providers import create_provider, get_available_providers
 from poplar.i18n import t, get_cache_config, get_context_config, get_active_provider_name, get_provider_config
@@ -182,6 +183,7 @@ class PoplarApp(App):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield ChatView(id="chat")
+        yield CommandSuggestion(id="cmd-suggest")
         yield Composer(id="composer")
         yield StatusFooter(self)
         yield Footer()

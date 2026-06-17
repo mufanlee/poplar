@@ -45,7 +45,6 @@ class CommandSuggestion(Vertical):
         self._visible = True
         self.styles.display = "block"
         self._render_list()
-        self.focus()
 
     def hide(self):
         """Hide the popup."""
@@ -91,7 +90,7 @@ class CommandSuggestion(Vertical):
 
     DEFAULT_CSS = """
     CommandSuggestion {
-        height: 14;
+        height: 15;
         width: 42;
         margin: 0 0 0 1;
         background: $surface;

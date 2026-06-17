@@ -71,7 +71,7 @@ class CommandSuggestion(Vertical):
         lines = []
         for i, (cmd, desc) in enumerate(items):
             prefix = "●" if i == (self._index % len(items)) else " "
-            lines.append(f"{prefix} {cmd}  [dim]— {desc}[/dim]")
+            lines.append(f"{prefix} {cmd}  {desc}")
         self.query_one("#cmd-list").update("\n".join(lines))
 
     def action_nav_up(self):
@@ -92,7 +92,6 @@ class CommandSuggestion(Vertical):
     DEFAULT_CSS = """
     CommandSuggestion {
         height: auto;
-        max-height: 14;
         width: 42;
         margin: 0 0 0 1;
         background: $surface;

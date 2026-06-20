@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
 from poplar.persistence.cache import CacheManager, make_key, get_shared_cache
-from poplar.i18n import get_cache_config
+from poplar.config import get_cache_config
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def _tool_cache_key(name: str, arguments: Dict[str, Any]) -> str:
     absolute paths for consistent cache keys.
     """
     normalized = dict(arguments)
-    if name in ("read_file", "list_directory", "write_file") and "path" in normalized:
+    if name in ("read_file", "list_directory") and "path" in normalized:
         from pathlib import Path
         p = Path(normalized["path"])
         if not p.is_absolute():

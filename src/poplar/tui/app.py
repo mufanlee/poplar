@@ -10,7 +10,8 @@ from poplar.tui.help_screen import HelpScreen
 from poplar.tui.cmd_prompt import CommandSuggestion
 from poplar.core.session import Session, Message, Role
 from poplar.providers import create_provider, get_available_providers
-from poplar.i18n import t, get_cache_config, get_context_config, get_active_provider_name, get_provider_config
+from poplar.i18n import t
+from poplar.config import get_cache_config, get_context_config, get_active_provider_name, get_provider_config, save_config, load_config
 from poplar.persistence.store import SessionStore
 from poplar.tools.base import TOOL_DEFINITIONS, execute_tool
 from poplar.persistence.cache import CacheManager, hash_messages, get_shared_cache
@@ -866,8 +867,6 @@ class PoplarApp(App):
 
     def _switch_provider(self, name: str):
         """Switch to a different provider at runtime."""
-        from poplar.i18n import save_config, load_config
-
         try:
             config = load_config()
             prov_cfg = config.get("providers", {}).get(name, {})

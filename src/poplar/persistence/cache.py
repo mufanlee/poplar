@@ -232,7 +232,7 @@ def get_shared_cache() -> CacheManager:
     """Get the global CacheManager singleton, creating it on first use."""
     global _cache_singleton
     if _cache_singleton is None:
-        from poplar.i18n import get_cache_config
+        from poplar.config import get_cache_config
         cfg = get_cache_config()
         _cache_singleton = CacheManager(max_memory=cfg.get("max_memory_items", 100))
     return _cache_singleton

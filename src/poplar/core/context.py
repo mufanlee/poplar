@@ -76,7 +76,7 @@ class ContextManager:
 
         # Don't include messages that are already summaries
         old_msgs = [m for m in old_msgs if not (
-            m.role == Role.SYSTEM and m.content.startswith("[Summary")
+            m.role == Role.SYSTEM and (m.content.startswith("[Summary") or m.content.startswith("*Summary"))
         )]
 
         return old_msgs, recent_msgs
@@ -118,9 +118,9 @@ class ContextManager:
 
     @staticmethod
     def format_summary_message(summary_text: str) -> Message:
-        """Wrap summary text into a SYSTEM message."""
-        return Message(role=Role.SYSTEM,
-                       content=f"[Summary of earlier conversation]\n{summary_text}")
+        """Wrap summary text into an assistant message."""
+        return Message(role=Role.ASSISTANT,
+                       content=f"*Summary of earlier conversation*\n\n{summary_text}")
 
     def apply_compression(self, session: Session, summary_text: str,
                           recent_messages: List[Message]):
@@ -138,5 +138,5 @@ class ContextManager:
         """Get the estimated token count for all messages in a session."""
         messages = session.messages or []
         meaningful = [m for m in messages
-                      if m.role != Role.SYSTEM or m.content.startswith("[Summary")]
+                      if m.role != Role.SYSTEM or m.content.startswith("[Summary") or m.content.startswith("*Summary")]
         return messages_token_count(meaningful)

@@ -115,8 +115,8 @@ class TestContextManager:
 
     def test_format_summary_message(self):
         msg = ContextManager.format_summary_message("test summary")
-        assert msg.role == Role.SYSTEM
-        assert "[Summary of earlier conversation]" in msg.content
+        assert msg.role == Role.ASSISTANT
+        assert "*Summary of earlier conversation*" in msg.content
         assert "test summary" in msg.content
 
     def test_apply_compression(self):
@@ -134,8 +134,8 @@ class TestContextManager:
         ]
         ctx.apply_compression(session, "Summary text", recent)
         assert len(session.messages) == 3  # summary + 2 recent
-        assert session.messages[0].role == Role.SYSTEM
-        assert "[Summary" in session.messages[0].content
+        assert session.messages[0].role == Role.ASSISTANT
+        assert "*Summary of earlier conversation*" in session.messages[0].content
         assert session.messages[1].content == "new1"
 
     def test_get_cumulative_token_count(self):

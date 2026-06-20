@@ -752,12 +752,8 @@ class PoplarApp(App):
         chat_view.messages = list(self.session.messages)
         chat_view.scroll_end(animate=False)
 
-        # Add a visible completion notice (as assistant message for visibility)
-        note = f"📦 **{t('compress_done')}** — older conversation summarized into 1 system message"
-        summary_note = Message(role=Role.ASSISTANT, content=note)
-        chat_view.add_message(summary_note)
-
         self._update_status_bar()
+        self.notify(t("compress_done"))
         self.notify(t("compress_done"))
         logger.info("Compression complete")
 

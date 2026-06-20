@@ -34,18 +34,10 @@ PROVIDER_DEFAULTS: dict = {
 
 
 def get_config_path():
-    """Get the configuration file path, preferring writable location."""
+    """Get the configuration file path at the standard location."""
     home_dir = Path.home() / ".poplar"
-    try:
-        home_dir.mkdir(parents=True, exist_ok=True)
-        test = home_dir / ".write_test"
-        test.touch()
-        test.unlink()
-        return home_dir / "config.yaml"
-    except (OSError, PermissionError):
-        pass
-    # Fallback: project writable directory
-    return Path.cwd() / ".poplar" / "config.yaml"
+    home_dir.mkdir(parents=True, exist_ok=True)
+    return home_dir / "config.yaml"
 
 
 def init_config():
@@ -60,7 +52,10 @@ def init_config():
             "cache": dict(CACHE_DEFAULTS),
             "context": dict(CONTEXT_DEFAULTS),
         }
-        save_config(default_config)
+        try:
+            save_config(default_config)
+        except OSError:
+            pass  # Read-only filesystem, can't write defaults
 
 
 def load_config():
@@ -76,6 +71,7 @@ def load_config():
 def save_config(config):
     """Save configuration to file."""
     config_path = get_config_path()
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     with open(config_path, 'w', encoding='utf-8') as f:
         yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
 

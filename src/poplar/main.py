@@ -42,12 +42,19 @@ def main() -> int:
     """Main entry point for Poplar."""
     setup_crash_handler()
 
-    from poplar.tui.app import PoplarApp
+    # Check for API key before starting
+    from poplar.config import get_provider_config
+    prov = get_provider_config()
+    name = prov["name"]
+    if name != "ollama":
+        api_key = prov["config"].get("api_key") or os.getenv(f"{name.upper()}_API_KEY")
+        if not api_key:
+            print(f"Error: No API key for provider '{name}'.")
+            print(f"Set in ~/.poplar/config.yaml: api_key under providers.{name}")
+            print(f"Or export {name.upper()}_API_KEY=sk-xxxx")
+            return 1
 
-    # Check for API key
-    if not os.getenv("DEEPSEEK_API_KEY"):
-        print("Warning: DEEPSEEK_API_KEY environment variable not set.")
-        print("Set it or edit src/poplar/tui/app.py to add your API key.")
+    from poplar.tui.app import PoplarApp
 
     try:
         app = PoplarApp()

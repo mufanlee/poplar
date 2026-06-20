@@ -684,18 +684,18 @@ class PoplarApp(App):
 
     def _compress_conversation(self):
         """Compress earlier messages using LLM summarization (runs in worker thread)."""
-        self.notify(t("compress_start"))
+        ctx = self.context_mgr
+        old_msgs, recent_msgs = ctx.get_summarizable_messages(self.session.messages)
+        if not old_msgs or len(old_msgs) < 2:
+            self.notify(t("compress_done") + " — nothing to compress")
+            return
 
-        # Show a system message indicating compression
+        self.notify(t("compress_start"))
         chat_view = self.query_one(ChatView)
-        compress_msg = Message(
-            role=Role.SYSTEM,
-            content=f"🔄 {t('compress_start')}"
-        )
+        compress_msg = Message(role=Role.SYSTEM, content=f"🔄 {t('compress_start')}")
         chat_view.add_message(compress_msg)
         chat_view.scroll_end(animate=False)
 
-        # Run compression in a background thread to avoid blocking the UI
         self.run_worker(self._do_compress, thread=True)
 
     def _do_compress(self):
@@ -706,9 +706,6 @@ class PoplarApp(App):
         old_msgs, recent_msgs = ctx.get_summarizable_messages(
             self.session.messages
         )
-        if not old_msgs or len(old_msgs) < 2:
-            self.call_from_thread(self.notify, t("compress_done") + " — nothing to compress")
-            return
 
         try:
             # Build summarization prompt

@@ -98,6 +98,18 @@ class OllamaProvider:
         yield {"type": "done"}
 
     def get_models(self) -> List[ModelInfo]:
+        """Query Ollama server for available models, falling back to current model."""
+        try:
+            import httpx
+            resp = httpx.get(self._api_url("/api/tags"), timeout=5)
+            resp.raise_for_status()
+            data = resp.json()
+            models = data.get("models", [])
+            if models:
+                return [ModelInfo(id=m["name"], name=m.get("name", m["name"]))
+                        for m in models]
+        except Exception:
+            pass
         return [
             ModelInfo(id=self.model, name=f"Ollama {self.model}"),
         ]

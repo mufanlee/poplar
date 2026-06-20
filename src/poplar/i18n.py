@@ -89,20 +89,21 @@ TRANSLATIONS = {
 }
 
 _current_language: str = DEFAULT_LANGUAGE
+_language_inited: bool = False
 
 
 def get_language() -> str:
-    """Get the current language, checking env var and config file."""
-    global _current_language
+    """Get the current language, checking env var first, then config."""
+    global _current_language, _language_inited
     env_lang = os.getenv("POPLAR_LANGUAGE")
     if env_lang in TRANSLATIONS:
-        _current_language = env_lang
-        return _current_language
-    config = load_config()
-    if "language" in config and config["language"] in TRANSLATIONS:
-        _current_language = config["language"]
-        return _current_language
-    return DEFAULT_LANGUAGE
+        return env_lang
+    if not _language_inited:
+        config = load_config()
+        if "language" in config and config["language"] in TRANSLATIONS:
+            _current_language = config["language"]
+        _language_inited = True
+    return _current_language
 
 
 def set_language(language: str) -> bool:

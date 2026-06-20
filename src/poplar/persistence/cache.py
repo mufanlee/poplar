@@ -181,7 +181,7 @@ class CacheManager:
         """Insert into memory LRU, evicting oldest if full."""
         if key in self._memory:
             self._memory.move_to_end(key)
-        elif len(self._memory) >= self.max_memory:
+        elif self.max_memory > 0 and len(self._memory) >= self.max_memory:
             self._memory.popitem(last=False)
         self._memory[key] = CacheEntry(value, expires_at)
 

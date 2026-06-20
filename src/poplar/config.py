@@ -34,10 +34,18 @@ PROVIDER_DEFAULTS: dict = {
 
 
 def get_config_path():
-    """Get the configuration file path."""
-    config_dir = Path.home() / ".poplar"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    return config_dir / "config.yaml"
+    """Get the configuration file path, preferring writable location."""
+    home_dir = Path.home() / ".poplar"
+    try:
+        home_dir.mkdir(parents=True, exist_ok=True)
+        test = home_dir / ".write_test"
+        test.touch()
+        test.unlink()
+        return home_dir / "config.yaml"
+    except (OSError, PermissionError):
+        pass
+    # Fallback: project writable directory
+    return Path.cwd() / ".poplar" / "config.yaml"
 
 
 def init_config():

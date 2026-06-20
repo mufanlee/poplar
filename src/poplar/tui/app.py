@@ -744,7 +744,11 @@ class PoplarApp(App):
     def _apply_compression(self, summary: str, recent_msgs: list):
         """Main thread: apply compression result to session and UI."""
         ctx = self.context_mgr
-        ctx.apply_compression(self.session, summary, recent_msgs)
+        summary_msg = Message(
+            role=Role.ASSISTANT,
+            content=f"*Summary of earlier conversation*\n\n{summary}\n\n---\n📦 **{t('compress_done')}**"
+        )
+        self.session.messages = [summary_msg] + recent_msgs
         self._total_tokens = ctx.get_cumulative_token_count(self.session)
 
         # Reload chat view via reactive

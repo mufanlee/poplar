@@ -687,7 +687,20 @@ class PoplarApp(App):
         ctx = self.context_mgr
         old_msgs, recent_msgs = ctx.get_summarizable_messages(self.session.messages)
         if not old_msgs or len(old_msgs) < 2:
-            self.notify(t("compress_done") + " — nothing to compress")
+            lines = [
+                "**Compression skipped**",
+                "",
+                f"You only have {len(self.session.messages)} message(s) in total.",
+                f"Need at least {ctx.keep_recent_exchanges + 1} user exchanges to compress.",
+                "",
+                "Keep chatting and try again later.",
+            ]
+            msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
+            self.session.add_message(msg)
+            self.store.save_message(self.session.id, msg)
+            chat_view = self.query_one(ChatView)
+            chat_view.add_message(msg)
+            chat_view.scroll_end(animate=False)
             return
 
         self.notify(t("compress_start"))
@@ -738,6 +751,11 @@ class PoplarApp(App):
         chat_view = self.query_one(ChatView)
         chat_view.messages = list(self.session.messages)
         chat_view.scroll_end(animate=False)
+
+        # Add a visible completion notice (as assistant message for visibility)
+        note = f"📦 **{t('compress_done')}** — older conversation summarized into 1 system message"
+        summary_note = Message(role=Role.ASSISTANT, content=note)
+        chat_view.add_message(summary_note)
 
         self._update_status_bar()
         self.notify(t("compress_done"))

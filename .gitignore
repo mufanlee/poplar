@@ -31,3 +31,4 @@ poplar.log
 .poplar/
 .reasonix/
 poplar-session-*.json
+reasonix.toml

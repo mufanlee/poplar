@@ -4,7 +4,6 @@ import sys
 import os
 import traceback
 from datetime import datetime
-from pathlib import Path
 from poplar.utils import get_writable_dir
 
 

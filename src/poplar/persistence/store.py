@@ -3,11 +3,10 @@
 import json
 import sqlite3
 import uuid
-from pathlib import Path
 from datetime import datetime
 from typing import List, Optional
 from poplar.core.session import Session, Message, Role
-from poplar.utils import get_writable_dir, get_db_path
+from poplar.utils import get_db_path
 
 
 class SessionStore:

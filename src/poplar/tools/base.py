@@ -3,7 +3,7 @@
 import json
 import logging
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any
 
 from poplar.persistence.cache import CacheManager, make_key, get_shared_cache
 from poplar.config import get_cache_config

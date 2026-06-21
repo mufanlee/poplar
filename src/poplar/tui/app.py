@@ -7,16 +7,16 @@ from poplar.tui.composer import Composer, ComposerSubmit
 from poplar.tui.session_picker import SessionPicker
 from poplar.tui.help_screen import HelpScreen
 from poplar.tui.cmd_prompt import CommandSuggestion
-from poplar.tui.commands import COMMANDS, UI_ONLY_COMMANDS, find_command, dispatch_command
-from poplar.core.session import Session, Message, Role
+from poplar.tui.commands import UI_ONLY_COMMANDS, dispatch_command
+from poplar.core.session import Message, Role
 from poplar.providers import create_provider, get_available_providers
 from poplar.i18n import t
-from poplar.config import get_cache_config, get_context_config, get_active_provider_name, get_provider_config, save_config, load_config
+from poplar.config import get_context_config, get_active_provider_name, get_provider_config, save_config, load_config
 from poplar.persistence.store import SessionStore
-from poplar.tools.base import ToolResult, TOOL_RESULT_PREVIEW_CHARS
+from poplar.tools.base import TOOL_RESULT_PREVIEW_CHARS
 from poplar.core.context import ContextManager, estimate_tokens
 from poplar.core.stats import stats
-from poplar.core.agent_loop import AgentLoop, AgentTurn
+from poplar.core.agent_loop import AgentLoop
 from poplar.core.trust import is_workspace_trusted, trust_workspace
 from poplar.tui.trust_screen import TrustScreen
 from poplar.utils import get_writable_dir, SPINNER_CHARS, is_thinking_message

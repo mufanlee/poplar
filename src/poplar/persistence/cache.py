@@ -5,7 +5,6 @@ import time
 import hashlib
 import sqlite3
 from collections import OrderedDict
-from pathlib import Path
 from typing import Optional, Callable
 
 from poplar.utils import get_db_path

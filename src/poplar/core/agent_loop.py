@@ -7,7 +7,7 @@ retry and caching. Does NOT touch the UI (no Textual imports).
 import json
 import time
 import logging
-from typing import Optional, List, Callable, Dict, Any
+from typing import Optional, List, Callable
 
 from dataclasses import dataclass, field
 
@@ -15,7 +15,7 @@ from poplar.core.session import Message, Role, Session
 from poplar.tools.base import ToolResult, TOOL_DEFINITIONS, execute_tool
 from poplar.persistence.cache import hash_messages, get_shared_cache
 from poplar.config import get_cache_config, get_context_config
-from poplar.utils import SPINNER_CHARS, is_thinking_message
+from poplar.utils import is_thinking_message
 
 logger = logging.getLogger(__name__)
 

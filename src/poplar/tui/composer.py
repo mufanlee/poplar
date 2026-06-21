@@ -67,7 +67,7 @@ class Composer(Widget):
         if event.key == "ctrl+j":
             event.stop()
             self.query_one(TextArea).insert("\n")
-        elif event.ctrl and event.key == "ctrl+enter":
+        elif event.key == "ctrl+enter":
             event.stop()
             self.query_one(TextArea).insert("\n")
 

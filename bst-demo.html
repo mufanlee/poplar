@@ -416,25 +416,106 @@
             const root = tree.root;
             if (!root) return;
 
-            const paddingX = 50;
+            const paddingX = 55;
             const paddingY = 50;
             const depth = tree.getDepth();
             const vertSpacing = Math.min(110, (canvasHeight - paddingY * 2) / Math.max(depth, 1));
+            const usableWidth = canvasWidth - 2 * paddingX;
 
-            function assign(node, left, right, depthLevel) {
+            // ── Pass 1: Inorder traversal → assign uniform preliminary x ──
+            const inorderList = [];
+            function inorderCollect(node) {
                 if (!node) return;
-                const x = (left + right) / 2;
-                const y = paddingY + depthLevel * vertSpacing + 30;
-                node.x = x;
-                node.y = y;
-                assign(node.left, left, x, depthLevel + 1);
-                assign(node.right, x, right, depthLevel + 1);
+                inorderCollect(node.left);
+                inorderList.push(node);
+                inorderCollect(node.right);
             }
+            inorderCollect(root);
 
-            assign(root, paddingX, canvasWidth - paddingX, 0);
+            const n = inorderList.length;
+            inorderList.forEach((node, i) => {
+                node._prelimX = paddingX + (i / (n - 1 || 1)) * usableWidth;
+            });
+
+            // ── Assign depth (y coordinate) ──
+            function setDepth(node, d) {
+                if (!node) return;
+                node._depth = d;
+                setDepth(node.left, d + 1);
+                setDepth(node.right, d + 1);
+            }
+            setDepth(root, 0);
+
+            // ── Pass 2: Post-order — center parent between children ──
+            function centerParent(node) {
+                if (!node) return;
+                centerParent(node.left);
+                centerParent(node.right);
+
+                if (node.left && node.right) {
+                    node.x = (node.left.x + node.right.x) / 2;
+                } else if (node.left) {
+                    node.x = (node._prelimX + node.left.x) / 2;
+                } else if (node.right) {
+                    node.x = (node._prelimX + node.right.x) / 2;
+                } else {
+                    node.x = node._prelimX;
+                }
+                node.y = paddingY + node._depth * vertSpacing + 30;
+            }
+            centerParent(root);
+
+            // ── Pass 3: Conflict resolution — enforce minimum horizontal gap ──
+            const minGap = NODE_RADIUS * 2.5;
+            const byDepth = {};
+            function collectByDepth(node) {
+                if (!node) return;
+                const key = node._depth;
+                if (!byDepth[key]) byDepth[key] = [];
+                byDepth[key].push(node);
+                collectByDepth(node.left);
+                collectByDepth(node.right);
+            }
+            collectByDepth(root);
+
+            // Sort each depth level by x and shift to enforce min gap
+            Object.values(byDepth).forEach(nodes => {
+                nodes.sort((a, b) => a.x - b.x);
+                for (let i = 1; i < nodes.length; i++) {
+                    const gap = nodes[i].x - nodes[i - 1].x;
+                    if (gap < minGap) {
+                        const shift = minGap - gap;
+                        for (let j = i; j < nodes.length; j++) {
+                            nodes[j].x += shift;
+                        }
+                    }
+                }
+            });
+
+            // ── Pass 4: Re-center parents after conflict resolution ──
+            function recenter(node) {
+                if (!node) return;
+                recenter(node.left);
+                recenter(node.right);
+                if (node.left && node.right) {
+                    node.x = (node.left.x + node.right.x) / 2;
+                }
+                // Clamp to canvas bounds
+                const margin = NODE_RADIUS + 5;
+                node.x = Math.max(paddingX + margin, Math.min(canvasWidth - paddingX - margin, node.x));
+            }
+            recenter(root);
+
+            // Clean up temporary properties
+            function cleanup(node) {
+                if (!node) return;
+                delete node._prelimX;
+                delete node._depth;
+                cleanup(node.left);
+                cleanup(node.right);
+            }
+            cleanup(root);
         }
-
-        // ================================================================
         //  4. 绘制引擎
         // ================================================================
 
@@ -871,9 +952,24 @@
             if (animationRunning) {
                 stopAnimationLoop();
             }
-            bst = new BST();
-            const values = randomUniqueInts(15, 1, 200);
-            bst.fromArray(values);
+
+            // Retry up to 5 times to get a reasonably balanced tree
+            let bestTree = null;
+            let bestDepth = Infinity;
+
+            for (let attempt = 0; attempt < 5; attempt++) {
+                const candidate = new BST();
+                const values = randomUniqueInts(15, 1, 200);
+                candidate.fromArray(values);
+                const d = candidate.getDepth();
+                if (d < bestDepth) {
+                    bestDepth = d;
+                    bestTree = candidate;
+                }
+                if (d <= 7) break; // depth ≤ 7 is good enough for 15 nodes
+            }
+
+            bst = bestTree;
 
             // 重置状态
             bst.resetStates();

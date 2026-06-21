@@ -309,7 +309,7 @@ class PoplarApp(App):
         text = event.text.strip()
 
         # Handle /commands — echo as user message (skip pure UI commands)
-        if text.startswith("/") and text not in ("/help", "/quit", "/session", "/clear"):
+        if text.startswith("/") and text not in ("/help", "/quit", "/session", "/clear", "/raw"):
             chat_view = self.query_one(ChatView)
             user_msg = Message(role=Role.USER, content=event.text)
             self.session.add_message(user_msg)
@@ -343,10 +343,14 @@ class PoplarApp(App):
         if text.startswith("/export"):
             self._export_session(text)
             return
-        if text.startswith("/raw "):
-            raw_text = text[5:].strip()
+        if text == "/raw" or text.startswith("/raw "):
+            parts = text.split(maxsplit=1)
+            raw_text = parts[1] if len(parts) > 1 else ""
             if raw_text:
                 self._start_raw_request(raw_text)
+            else:
+                self._show_unknown_command(text)
+            return
             return
         if text.startswith("/import"):
             self._import_session(text)

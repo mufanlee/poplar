@@ -115,7 +115,13 @@ def set_language(language: str) -> bool:
 def t(key, **kwargs):
     """Get translation for a key."""
     lang = get_language()
-    translation = TRANSLATIONS.get(lang, {}).get(key, TRANSLATIONS[DEFAULT_LANGUAGE].get(key, key))
+    translation = TRANSLATIONS.get(lang, {}).get(key)
+    if translation is None:
+        translation = TRANSLATIONS[DEFAULT_LANGUAGE].get(key)
+    if translation is None:
+        import logging
+        logging.getLogger(__name__).warning("Missing translation key: %s", key)
+        translation = key
     if kwargs:
         return translation.format(**kwargs)
     return translation

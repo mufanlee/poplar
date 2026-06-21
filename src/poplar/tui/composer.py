@@ -2,7 +2,6 @@
 
 from textual.widget import Widget
 from textual.widgets import TextArea
-from textual.binding import Binding
 from textual.message import Message
 from poplar.i18n import t
 from poplar.tui.cmd_prompt import CommandSuggestion
@@ -15,11 +14,7 @@ class ComposerSubmit(Message):
 
 
 class Composer(Widget):
-    """Multi-line input. Enter=send, Ctrl+Enter=newline. '/' shows command suggestions."""
-
-    BINDINGS = [
-        Binding("enter", "send", "Send", show=False, priority=True),
-    ]
+    """Multi-line input. Enter=send, Ctrl+Enter/Ctrl+J=newline. '/' shows command suggestions."""
 
     def compose(self):
         yield TextArea(id="input")

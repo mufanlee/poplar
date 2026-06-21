@@ -14,10 +14,10 @@ from poplar.i18n import t
 from poplar.config import get_cache_config, get_context_config, get_active_provider_name, get_provider_config, save_config, load_config
 from poplar.persistence.store import SessionStore
 from poplar.tools.base import ToolResult, TOOL_RESULT_PREVIEW_CHARS
-from poplar.core.context import ContextManager
+from poplar.core.context import ContextManager, estimate_tokens
 from poplar.core.stats import stats
 from poplar.core.agent_loop import AgentLoop, AgentTurn
-from poplar.utils import get_writable_dir
+from poplar.utils import get_writable_dir, SPINNER_CHARS, is_thinking_message
 import json
 import logging
 import time
@@ -54,12 +54,6 @@ logging.basicConfig(
     filemode='a'
 )
 logger = logging.getLogger(__name__)
-
-SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠉"
-
-SYSTEM_PROMPT = """You are Poplar, a helpful AI assistant with access to tools for file operations and command execution.
-Use tools when appropriate: read_file, write_file, list_directory, run_command.
-Keep responses concise and clear. Use Markdown formatting for code blocks, lists, and emphasis."""
 
 
 class PoplarApp(App):
@@ -375,14 +369,14 @@ class PoplarApp(App):
         """Update spinner animation with braille character before 'Thinking...'."""
         if not self._thinking:
             return
-        self._spinner_index = (self._spinner_index + 1) % len(SPINNER_FRAMES)
-        frame = SPINNER_FRAMES[self._spinner_index]
+        self._spinner_index = (self._spinner_index + 1) % len(SPINNER_CHARS)
+        frame = SPINNER_CHARS[self._spinner_index]
         elapsed = int(time.time() - self._thinking_start_time)
         chat_view = self.query_one(ChatView)
 
         # Update thinking message display using widget update
         chat_view.update_message_widget(
-            predicate=lambda w: hasattr(w, '_msg') and self._is_thinking_msg(w._msg),
+            predicate=lambda w: hasattr(w, '_msg') and is_thinking_message(w._msg),
             make_message=lambda w: Message(
                 role=Role.SYSTEM,
                 content=f"{frame} {t('thinking')}... ({t('esc_to_cancel')}, {elapsed}{t('seconds')})"
@@ -408,7 +402,7 @@ class PoplarApp(App):
                 self._current_worker.cancel()
             
             chat_view = self.query_one(ChatView)
-            self.session.messages = [m for m in self.session.messages if not self._is_thinking_msg(m)]
+            self.session.messages = [m for m in self.session.messages if not is_thinking_message(m)]
             # Also remove streaming msg from session if present
             if self._streaming_msg and self._streaming_msg in self.session.messages:
                 self.session.messages.remove(self._streaming_msg)
@@ -426,12 +420,6 @@ class PoplarApp(App):
             self._update_status_bar()
             self.notify(t("notify_cancelled"))
             self._check_pending()
-
-    def _get_api_messages(self):
-        """Get messages for API call, excluding thinking messages."""
-        meaningful = [m for m in self.session.messages if not self._is_thinking_msg(m)]
-        system_msg = Message(role=Role.SYSTEM, content=SYSTEM_PROMPT)
-        return [system_msg] + meaningful
 
     def _fetch_response(self):
         """Worker function — delegates to AgentLoop for LLM+tool orchestration."""
@@ -532,11 +520,11 @@ class PoplarApp(App):
 
         if self._thinking:
             self._stop_spinner()
-            self.session.messages = [m for m in self.session.messages if not self._is_thinking_msg(m)]
+            self.session.messages = [m for m in self.session.messages if not is_thinking_message(m)]
 
             # Remove thinking message widget
             for child in list(chat_view.children):
-                if isinstance(child, MessageWidget) and self._is_thinking_msg(child._msg):
+                if isinstance(child, MessageWidget) and is_thinking_message(child._msg):
                     child.remove()
 
             self._streaming_msg = Message(role=Role.ASSISTANT, content=content)
@@ -564,9 +552,9 @@ class PoplarApp(App):
         self.session.add_message(assistant_msg)
         self.store.save_message(self.session.id, assistant_msg)
         self._message_count += 1
-        self._total_tokens += max(1, len(content) // 3)
+        self._total_tokens += max(1, estimate_tokens(content))
         stats.record_assistant_message()
-        stats.record_api_success(completion_tokens=len(content) // 3)
+        stats.record_api_success(completion_tokens=estimate_tokens(content))
         self._streaming_msg = None
 
         # Sync chat view with session (rebuilds all widgets from session.messages)
@@ -879,16 +867,6 @@ class PoplarApp(App):
             logger.error("Import failed: %s", str(e), exc_info=True)
             self.notify(f"[red]Import failed: {e}[/red]")
 
-    def _is_thinking_msg(self, m: Message) -> bool:
-        """Check if a message is a thinking/spinner indicator."""
-        if m.role != Role.SYSTEM:
-            return False
-        content = m.content
-        # Spinner messages contain a braille spinner frame + translated "Thinking"
-        spinner_chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠉"
-        return bool(content and any(char in content for char in spinner_chars) and
-                   (t("thinking").lower() in content.lower()))
-
     def _show_error(self, error: str):
         """Called on main thread when API call fails."""
         logger.error("Displaying error: %s", error[:100] if len(error) > 100 else error)
@@ -898,11 +876,11 @@ class PoplarApp(App):
 
         # Remove thinking message widgets
         for child in list(chat_view.children):
-            if isinstance(child, MessageWidget) and self._is_thinking_msg(child._msg):
+            if isinstance(child, MessageWidget) and is_thinking_message(child._msg):
                 child.remove()
 
         # Clean session messages
-        self.session.messages = [m for m in self.session.messages if not self._is_thinking_msg(m)]
+        self.session.messages = [m for m in self.session.messages if not is_thinking_message(m)]
         # Rebuild chat view to match session
         chat_view._rebuild(self.session.messages)
 

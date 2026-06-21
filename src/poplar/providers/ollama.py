@@ -1,9 +1,12 @@
 """Ollama provider — connects to local Ollama instance."""
 
 import json
+import logging
 from typing import Optional, List, AsyncIterator, Iterator, Dict, Any
 from poplar.providers.base import ChatResponse, ModelInfo
 from poplar.core.session import Message
+
+logger = logging.getLogger(__name__)
 
 
 class OllamaProvider:
@@ -107,8 +110,8 @@ class OllamaProvider:
             if models:
                 return [ModelInfo(id=m["name"], name=m.get("name", m["name"]))
                         for m in models]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to fetch Ollama models: %s", e)
         return [
             ModelInfo(id=self.model, name=f"Ollama {self.model}"),
         ]

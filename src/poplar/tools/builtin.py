@@ -76,7 +76,12 @@ def list_directory(args: Dict[str, Any]) -> ToolResult:
 
 
 def run_command(args: Dict[str, Any]) -> ToolResult:
-    """Execute a shell command."""
+    """Execute a shell command.
+
+    WARNING: Uses shell=True — the LLM can request arbitrary commands.
+    This is intentional for a local developer TUI tool, but users should
+    be aware that malicious prompt injection could lead to command execution.
+    """
     cmd = args["command"]
     try:
         result = subprocess.run(

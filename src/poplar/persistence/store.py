@@ -7,12 +7,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Optional
 from poplar.core.session import Session, Message, Role
-from poplar.utils import get_writable_dir
-
-
-def get_db_path() -> str:
-    """Get the SQLite database path in the poplar data directory."""
-    return str(get_writable_dir() / "poplar.db")
+from poplar.utils import get_writable_dir, get_db_path
 
 
 class SessionStore:

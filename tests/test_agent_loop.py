@@ -1,7 +1,8 @@
 """Tests for AgentLoop — the LLM+tool orchestration class."""
 
 from unittest.mock import MagicMock, patch
-from poplar.core.agent_loop import AgentLoop, AgentTurn, SPINNER_CHARS
+from poplar.core.agent_loop import AgentLoop, AgentTurn
+from poplar.utils import SPINNER_CHARS, is_thinking_message
 from poplar.core.session import Session, Message, Role
 from poplar.tools.base import ToolResult
 
@@ -273,15 +274,15 @@ class TestAgentLoopHelpers:
 
     def test_is_thinking_msg_true(self):
         msg = Message(role=Role.SYSTEM, content=SPINNER + " thinking... (esc to cancel, 0s)")
-        assert AgentLoop._is_thinking_msg(msg) is True
+        assert is_thinking_message(msg) is True
 
     def test_is_thinking_msg_not_system(self):
         msg = Message(role=Role.USER, content=SPINNER + " thinking...")
-        assert AgentLoop._is_thinking_msg(msg) is False
+        assert is_thinking_message(msg) is False
 
     def test_is_thinking_msg_no_spinner(self):
         msg = Message(role=Role.SYSTEM, content="thinking...")
-        assert AgentLoop._is_thinking_msg(msg) is False
+        assert is_thinking_message(msg) is False
 
     def test_format_tool_calls(self):
         mock_provider = MagicMock()

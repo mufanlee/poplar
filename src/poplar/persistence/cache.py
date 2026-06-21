@@ -8,12 +8,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Optional, Callable
 
-from poplar.utils import get_writable_dir
-
-
-def get_cache_db_path() -> str:
-    """Get the SQLite cache database path in the poplar data directory."""
-    return str(get_writable_dir() / "poplar.db")
+from poplar.utils import get_db_path
 
 
 def make_key(*parts: str) -> str:
@@ -50,7 +45,7 @@ class CacheManager:
     """
 
     def __init__(self, db_path: Optional[str] = None, max_memory: Optional[int] = None):
-        self.db_path = db_path or get_cache_db_path()
+        self.db_path = db_path or get_db_path()
         self.max_memory = max_memory if max_memory is not None else 100
         self._memory: OrderedDict[str, CacheEntry] = OrderedDict()
         self._init_table()

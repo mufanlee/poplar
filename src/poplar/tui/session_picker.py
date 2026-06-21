@@ -98,9 +98,7 @@ class SessionPicker(ModalScreen[str | None]):
         if self._renaming or not self._sessions: return
         self._renaming = True
         s = self._sessions[self._nav_index]
-        rename_input = self.query("#rename-input")
-        if rename_input:
-            rename_input.first().remove()
+        self.query_one("#rename-input", Input).remove() if self.query("#rename-input") else None
         box = self.query_one("#picker-box")
         box.mount(Input(value=s.title, id="rename-input"))
         self.query_one("#rename-input").focus()
@@ -113,10 +111,8 @@ class SessionPicker(ModalScreen[str | None]):
         self._renaming = False
         self.query_one("#rename-input", Input).remove()
         self._render_list()
-        # Persist via app callback
-        app = self.app
-        if hasattr(app, '_handle_picker_result'):
-            app._handle_picker_result(f"__rename__:{sid}:{new_title}")
+        # Dismiss with rename result — caller handles persistence
+        self.dismiss(f"__rename__:{sid}:{new_title}")
 
     CSS = """
     SessionPicker {

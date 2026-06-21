@@ -15,6 +15,7 @@ from poplar.core.session import Message, Role, Session
 from poplar.tools.base import ToolResult, TOOL_DEFINITIONS, execute_tool
 from poplar.persistence.cache import hash_messages, get_shared_cache
 from poplar.config import get_cache_config, get_context_config
+from poplar.utils import SPINNER_CHARS, is_thinking_message
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,6 @@ SYSTEM_PROMPT = (
     "capabilities. You can read/write files, list directories, and "
     "run shell commands. Be concise and helpful."
 )
-
-SPINNER_CHARS = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠉"
 
 
 @dataclass
@@ -195,7 +194,7 @@ class AgentLoop:
 
     def _get_api_messages(self, session: Session) -> List[Message]:
         """Get messages for API call, excluding thinking/spinner messages."""
-        meaningful = [m for m in session.messages if not self._is_thinking_msg(m)]
+        meaningful = [m for m in session.messages if not is_thinking_message(m)]
         system_msg = Message(role=Role.SYSTEM, content=SYSTEM_PROMPT)
         return [system_msg] + meaningful
 
@@ -225,14 +224,3 @@ class AgentLoop:
                      "429", "500", "502", "503", "overloaded", "busy"]
         return any(kw in msg_lower for kw in retryable)
 
-    @staticmethod
-    def _is_thinking_msg(m: Message) -> bool:
-        """Check if a message is a thinking/spinner indicator."""
-        if m.role != Role.SYSTEM:
-            return False
-        content = m.content
-        return bool(
-            content
-            and any(char in content for char in SPINNER_CHARS)
-            and "thinking" in content.lower()
-        )

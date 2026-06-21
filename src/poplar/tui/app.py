@@ -187,6 +187,7 @@ class PoplarApp(App):
     def _load_session_messages(self):
         """Load current session messages into ChatView."""
         chat_view = self.query_one(ChatView)
+        chat_view._rendered_count = 0
         chat_view.messages = list(self.session.messages)
 
     def action_session_picker(self):
@@ -283,6 +284,7 @@ class PoplarApp(App):
         self._first_message = True
         self._total_tokens = 0
         chat_view = self.query_one(ChatView)
+        chat_view._rendered_count = 0
         chat_view.messages = []
         self._update_status_bar()
         self.notify("Session cleared")
@@ -646,8 +648,9 @@ class PoplarApp(App):
         # Persist compressed session to store
         self.store.replace_all_messages(self.session.id, self.session.messages)
 
-        # Rebuild chat view from updated session
+        # Force full rebuild (message count decreased, incremental path would skip cleanup)
         chat_view = self.query_one(ChatView)
+        chat_view._rendered_count = 0
         chat_view.messages = list(self.session.messages)
         chat_view.scroll_end(animate=False)
 

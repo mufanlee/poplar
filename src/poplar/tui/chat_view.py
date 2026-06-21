@@ -37,7 +37,7 @@ def build_welcome():
     body.append(f"{t('welcome_start')}\n", style="bold green")
 
     panel = Panel(
-        Text(body),
+        body,
         title=t("welcome_title"),
         border_style="cyan",
         padding=(1, 2),

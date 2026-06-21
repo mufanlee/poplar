@@ -13,7 +13,7 @@ from poplar.providers import create_provider, get_available_providers
 from poplar.i18n import t
 from poplar.config import get_cache_config, get_context_config, get_active_provider_name, get_provider_config, save_config, load_config
 from poplar.persistence.store import SessionStore
-from poplar.tools.base import TOOL_DEFINITIONS, execute_tool
+from poplar.tools.base import TOOL_DEFINITIONS, execute_tool, ToolResult
 from poplar.persistence.cache import CacheManager, hash_messages, get_shared_cache
 from poplar.core.context import ContextManager
 from poplar.core.stats import stats
@@ -565,7 +565,10 @@ class PoplarApp(App):
                         args = json.loads(tc["arguments"])
                     except json.JSONDecodeError:
                         args = {}
-                    result = execute_tool(name, args)
+                    try:
+                        result = execute_tool(name, args)
+                    except Exception as e:
+                        result = ToolResult(content=f"Tool execution error: {str(e)}", success=False)
                     stats.record_tool_call()
                     # Visual marker for cached tool results
                     display_content = f"[dim][cached][/dim] {result.content}" if getattr(result, '_cached', False) else result.content

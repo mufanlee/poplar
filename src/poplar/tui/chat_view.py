@@ -8,6 +8,7 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 from poplar.core.session import Message, Role
 from poplar.i18n import t
+from poplar.tools.base import TOOL_RESULT_PREVIEW_CHARS
 
 
 def build_welcome():
@@ -75,7 +76,7 @@ class MessageContent(Static):
             self.update(Text(f"  {msg.content}", style="dim yellow"))
         elif msg.role == Role.TOOL:
             name = msg.name or "tool"
-            preview = msg.content[:500] + "..." if len(msg.content) > 500 else msg.content
+            preview = msg.content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(msg.content) > TOOL_RESULT_PREVIEW_CHARS else msg.content
             lines = [f"{t('tool_result_prefix', name=name)}:"]
             for line in preview.split("\n")[:10]:
                 lines.append(f"  {line}")

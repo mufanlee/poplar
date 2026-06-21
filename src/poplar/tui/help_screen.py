@@ -4,6 +4,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Static
 from textual.containers import Vertical
 from textual.binding import Binding
+from poplar.tui.commands import COMMANDS
 
 
 class HelpScreen(ModalScreen[None]):
@@ -18,20 +19,10 @@ class HelpScreen(ModalScreen[None]):
         with Vertical(id="help-box"):
             yield Static(" Commands ", id="help-title")
             yield Static(
-                "\n".join([
-                    "/help               Show this",
-                    "/quit               Exit application",
-                    "/session            Manage sessions",
-                    "/clear              Clear current session",
-                    "/context            Session context info",
-                    "/compress           Summarize conversation",
-                    "/stats              Performance statistics",
-                    "/export <path>      Export session to JSON",
-                    "/import <path>      Import session from JSON",
-                    "/provider           Show current provider",
-                    "/provider list      List all providers",
-                    "/provider set <n>   Switch provider",
-                ]),
+                "\n".join(
+                    f"{c.pattern:<22s}{c.description}"
+                    for c in COMMANDS
+                ),
                 id="help-body",
             )
             yield Static("[dim]Press Esc to close[/dim]", id="help-footer")

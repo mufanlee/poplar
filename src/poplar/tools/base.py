@@ -18,6 +18,10 @@ class ToolResult:
     success: bool = True
 
 
+# Max characters for tool result preview in chat view
+TOOL_RESULT_PREVIEW_CHARS = 500
+
+
 # Use shared cache singleton (shared with app.py)
 def _get_cache() -> CacheManager:
     return get_shared_cache()

@@ -7,15 +7,17 @@ from poplar.tui.composer import Composer, ComposerSubmit
 from poplar.tui.session_picker import SessionPicker
 from poplar.tui.help_screen import HelpScreen
 from poplar.tui.cmd_prompt import CommandSuggestion
+from poplar.tui.commands import COMMANDS, UI_ONLY_COMMANDS, find_command, dispatch_command
 from poplar.core.session import Session, Message, Role
 from poplar.providers import create_provider, get_available_providers
 from poplar.i18n import t
 from poplar.config import get_cache_config, get_context_config, get_active_provider_name, get_provider_config, save_config, load_config
 from poplar.persistence.store import SessionStore
-from poplar.tools.base import ToolResult
+from poplar.tools.base import ToolResult, TOOL_RESULT_PREVIEW_CHARS
 from poplar.core.context import ContextManager
 from poplar.core.stats import stats
 from poplar.core.agent_loop import AgentLoop, AgentTurn
+from poplar.utils import get_writable_dir
 import json
 import logging
 import time
@@ -43,26 +45,7 @@ class StatusFooter(Static):
 
 # Configure logging
 from pathlib import Path
-
-def _get_writable_dir(subdir: str) -> Path:
-    """Get a writable directory, preferring ~/.poplar/<subdir> with fallback."""
-    for base in (Path.home() / ".poplar", Path.cwd() / ".poplar"):
-        candidate = base / subdir
-        try:
-            candidate.mkdir(parents=True, exist_ok=True)
-            test = candidate / ".write_test"
-            test.touch()
-            test.unlink()
-            return candidate
-        except (OSError, PermissionError):
-            continue
-    # Last resort: temp directory
-    import tempfile
-    tmp = Path(tempfile.mkdtemp(prefix="poplar-")) / subdir
-    tmp.mkdir(parents=True, exist_ok=True)
-    return tmp
-
-_log_dir = _get_writable_dir("logs")
+_log_dir = get_writable_dir("logs")
 _log_path = _log_dir / "app.log"
 logging.basicConfig(
     level=logging.INFO,
@@ -307,45 +290,15 @@ class PoplarApp(App):
         text = event.text.strip()
 
         # Handle /commands — echo as user message (skip pure UI commands)
-        if text.startswith("/") and text not in ("/help", "/quit", "/session", "/clear"):
+        if text.startswith("/") and text not in UI_ONLY_COMMANDS:
             chat_view = self.query_one(ChatView)
             user_msg = Message(role=Role.USER, content=event.text)
             self.session.add_message(user_msg)
             self.store.save_message(self.session.id, user_msg)
             chat_view.add_message(user_msg)
 
-        if text == "/help":
-            self._show_help()
-            return
-        if text == "/session":
-            self.action_session_picker()
-            return
-        if text == "/clear":
-            self._clear_session()
-            return
-        if text == "/quit":
-            self.exit()
-            return
-        if text == "/compress":
-            self._compress_conversation()
-            return
-        if text == "/context":
-            self._show_context_info()
-            return
-        if text == "/stats":
-            self._show_stats()
-            return
-        if text.startswith("/provider"):
-            self._handle_provider_command(text)
-            return
-        if text.startswith("/export"):
-            self._export_session(text)
-            return
-        if text.startswith("/import"):
-            self._import_session(text)
-            return
-        if text.startswith("/"):
-            self._show_unknown_command(text)
+        # Dispatch via command registry (single source of truth)
+        if dispatch_command(self, text):
             return
         # If a response is streaming, queue this message for later
         if self._streaming:
@@ -567,7 +520,7 @@ class PoplarApp(App):
     def _show_tool_result(self, name: str, content: str):
         """Show tool execution result as a system message (mount directly, no reactive)."""
         chat_view = self.query_one(ChatView)
-        preview = content[:500] + "..." if len(content) > 500 else content
+        preview = content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(content) > TOOL_RESULT_PREVIEW_CHARS else content
         tool_msg = Message(role=Role.SYSTEM, content=f"{t('tool_result_prefix', name=name)}\n{preview}")
         w = MessageWidget(tool_msg)
         chat_view.mount(w)

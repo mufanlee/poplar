@@ -8,24 +8,12 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Optional, Callable
 
+from poplar.utils import get_writable_dir
+
 
 def get_cache_db_path() -> str:
-    """Get the SQLite cache database path.
-
-    Prefers ~/.poplar/poplar.db, but falls back to the project directory
-    or temp directory if filesystem is read-only.
-    """
-    import tempfile
-    for base in (Path.home() / ".poplar", Path.cwd() / ".poplar", Path(tempfile.gettempdir()) / ".poplar"):
-        try:
-            base.mkdir(parents=True, exist_ok=True)
-            test = base / ".write_test"
-            test.touch()
-            test.unlink()
-            return str(base / "poplar.db")
-        except (OSError, PermissionError):
-            continue
-    return str(Path(tempfile.mkdtemp(prefix="poplar-")) / "poplar.db")
+    """Get the SQLite cache database path in the poplar data directory."""
+    return str(get_writable_dir() / "poplar.db")
 
 
 def make_key(*parts: str) -> str:

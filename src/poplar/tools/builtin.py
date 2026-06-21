@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Dict, Any
 from poplar.tools.base import ToolResult
 
+# --- Tool-specific limits ---
+MAX_FILE_READ_CHARS = 8000
+MAX_COMMAND_OUTPUT_CHARS = 4000
+COMMAND_TIMEOUT_SECONDS = 30
+
 
 def _safe_path(path: str) -> Path:
     """Resolve a path, defaulting to current working directory."""
@@ -21,8 +26,8 @@ def read_file(args: Dict[str, Any]) -> ToolResult:
     try:
         content = path.read_text(encoding="utf-8")
         # Truncate if too long
-        if len(content) > 8000:
-            content = content[:8000] + "\n... (truncated)"
+        if len(content) > MAX_FILE_READ_CHARS:
+            content = content[:MAX_FILE_READ_CHARS] + "\n... (truncated)"
         return ToolResult(content=content)
     except FileNotFoundError:
         return ToolResult(content=f"File not found: {path}", success=False)
@@ -75,7 +80,8 @@ def run_command(args: Dict[str, Any]) -> ToolResult:
     cmd = args["command"]
     try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=30,
+            cmd, shell=True, capture_output=True, text=True,
+            timeout=COMMAND_TIMEOUT_SECONDS,
             cwd=os.getcwd()
         )
         output = result.stdout
@@ -83,8 +89,8 @@ def run_command(args: Dict[str, Any]) -> ToolResult:
             output += f"\n[stderr]\n{result.stderr}"
         if not output.strip():
             output = f"(exit code: {result.returncode})"
-        if len(output) > 4000:
-            output = output[:4000] + "\n... (truncated)"
+        if len(output) > MAX_COMMAND_OUTPUT_CHARS:
+            output = output[:MAX_COMMAND_OUTPUT_CHARS] + "\n... (truncated)"
         success = result.returncode == 0
         return ToolResult(content=output, success=success)
     except subprocess.TimeoutExpired:

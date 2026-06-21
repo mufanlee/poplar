@@ -2,25 +2,13 @@
 
 from textual.widgets import Static
 from textual.containers import Vertical
+from poplar.tui.commands import COMMANDS
 
 
 class CommandSuggestion(Vertical):
     """Slash command suggestion popup, shown above the composer."""
 
-    _COMMANDS = [
-        ("/help", "Show available commands"),
-        ("/quit", "Exit application"),
-        ("/session", "Manage sessions"),
-        ("/clear", "Clear current session"),
-        ("/context", "Show session context"),
-        ("/compress", "Compress conversation"),
-        ("/stats", "Performance statistics"),
-        ("/export ", "Export session to JSON"),
-        ("/import ", "Import session from JSON"),
-        ("/provider", "Show current provider"),
-        ("/provider list", "List all providers"),
-        ("/provider set", "Switch provider"),
-    ]
+    _COMMANDS = [(c.pattern, c.description) for c in COMMANDS]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -87,6 +87,8 @@ class DeepSeekProvider:
 
     def get_models(self) -> List[ModelInfo]:
         return [
-            ModelInfo(id="deepseek-chat", name="DeepSeek Chat"),
-            ModelInfo(id="deepseek-coder", name="DeepSeek Coder"),
+            ModelInfo(id="deepseek-v4-flash", name="DeepSeek V4 Flash"),
+            ModelInfo(id="deepseek-v4-pro", name="DeepSeek V4 Pro"),
+            ModelInfo(id="deepseek-chat", name="DeepSeek Chat (deprecating)"),
+            ModelInfo(id="deepseek-reasoner", name="DeepSeek Reasoner (deprecating)"),
         ]

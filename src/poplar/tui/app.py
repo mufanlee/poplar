@@ -796,6 +796,42 @@ class PoplarApp(App):
             logger.error("Failed to switch provider: %s", str(e), exc_info=True)
             self.notify(f"[red]Failed: {e}[/red]")
 
+    def _handle_model_command(self, text: str):
+        """Handle /model commands — list or switch models for current provider."""
+        parts = text.split()
+        cmd = parts[1] if len(parts) > 1 else "show"
+
+        if cmd == "list" or cmd == "show":
+            models = self.provider.get_models()
+            current = self.provider.model
+            lines = [f"**{self._provider_name}** · models:", "", "| Model | Status |", "|-------|--------|"]
+            for m in models:
+                marker = "● active" if m.id == current else "○"
+                lines.append(f"| `{m.id}` | {marker} |")
+            lines.append("")
+            lines.append("*/model set <name> — switch model*")
+            msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
+            chat_view = self.query_one(ChatView)
+            chat_view.add_message(msg)
+            chat_view.scroll_end(animate=False)
+
+        elif cmd == "set" and len(parts) >= 3:
+            name = parts[2]
+            models = {m.id: m for m in self.provider.get_models()}
+            if name not in models:
+                self.notify(f"[red]Unknown model: {name}[/red]")
+                return
+            self.provider.model = name
+            config = load_config()
+            config.setdefault("providers", {}).setdefault(self._provider_name, {})["model"] = name
+            save_config(config)
+            self._update_status_bar()
+            self.notify(f"Switched to [bold]{name}[/bold]")
+            logger.info("Switched model to %s", name)
+
+        else:
+            self._show_unknown_command(text)
+
     def _export_session(self, text: str):
         """Export current session to a JSON file."""
         parts = text.split(maxsplit=1)

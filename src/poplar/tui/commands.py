@@ -28,6 +28,7 @@ COMMANDS: List[Command] = [
     Command("/compress", "Compress conversation",        handler="_compress_conversation",  match="exact"),
     Command("/stats",    "Performance statistics",       handler="_show_stats",             match="exact"),
     Command("/provider", "Show / switch provider",       handler="_handle_provider_command",match="prefix"),
+    Command("/model",    "Show / switch model",           handler="_handle_model_command",   match="prefix"),
     Command("/export ",  "Export session to JSON",       handler="_export_session",         match="prefix"),
     Command("/import ",  "Import session from JSON",     handler="_import_session",         match="prefix"),
 ]

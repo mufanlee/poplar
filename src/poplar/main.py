@@ -26,6 +26,37 @@ def setup_crash_handler() -> None:
 
 def main() -> int:
     """Main entry point for Poplar."""
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("Poplar — AI Agent TUI v0.2.0")
+        print()
+        print("Usage: poplar [OPTIONS]")
+        print()
+        print("Options:")
+        print("  --help, -h        Show this help")
+        print("  --version, -v     Show version")
+        print("  --language LANG   Set language (en, zh)")
+        print()
+        print("Slash commands (inside the app):")
+        print("  /help             Show available commands")
+        print("  /model list       List available models")
+        print("  /model set <id>   Switch model")
+        print("  /provider list    List providers")
+        print("  /provider set <n> Switch provider")
+        print("  /compress         Summarize conversation")
+        print("  /context          Show context info")
+        print("  /export <path>    Export session")
+        print("  /import <path>    Import session")
+        return 0
+    if "--version" in sys.argv or "-v" in sys.argv:
+        print("poplar v0.2.0")
+        return 0
+
+    # Handle --language
+    for i, arg in enumerate(sys.argv):
+        if arg == "--language" and i + 1 < len(sys.argv):
+            os.environ["POPLAR_LANGUAGE"] = sys.argv[i + 1]
+            break
+
     setup_crash_handler()
 
     # Check for API key before starting

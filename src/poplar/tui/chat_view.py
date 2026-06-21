@@ -161,11 +161,26 @@ class ChatView(ScrollableContainer):
     }
     """
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._rendered_count = 0
+
     def _rebuild(self, messages: list[Message]):
+        # Incremental: only render new messages, reuse existing widgets
+        if self._rendered_count <= len(messages) and self._rendered_count > 0:
+            new_msgs = messages[self._rendered_count:]
+            for msg in new_msgs:
+                self.mount(MessageWidget(msg))
+            self._rendered_count = len(messages)
+            self.scroll_end(animate=False)
+            return
+
+        # Full rebuild (session switch, compression, initial load)
         self.remove_children()
         if not messages:
             self.mount(WelcomeWidget())
             self.scroll_end(animate=False)
+            self._rendered_count = 0
             return
         MAX_VISIBLE = 100
         display_msgs = messages[-MAX_VISIBLE:] if len(messages) > MAX_VISIBLE else messages
@@ -174,8 +189,8 @@ class ChatView(ScrollableContainer):
                 Text(f"  ... {len(messages) - MAX_VISIBLE} earlier messages hidden", style="dim")
             ))
         for msg in display_msgs:
-            w = MessageWidget(msg)
-            self.mount(w)
+            self.mount(MessageWidget(msg))
+        self._rendered_count = len(messages)
         self.scroll_end(animate=False)
 
     def watch_messages(self, messages: list[Message]):

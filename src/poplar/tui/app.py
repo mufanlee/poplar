@@ -309,7 +309,7 @@ class PoplarApp(App):
         text = event.text.strip()
 
         # Handle /commands — echo as user message (skip pure UI commands)
-        if text.startswith("/") and text not in ("/help", "/quit", "/session", "/clear", "/raw"):
+        if text.startswith("/") and text not in ("/help", "/quit", "/session", "/clear"):
             chat_view = self.query_one(ChatView)
             user_msg = Message(role=Role.USER, content=event.text)
             self.session.add_message(user_msg)
@@ -342,15 +342,6 @@ class PoplarApp(App):
             return
         if text.startswith("/export"):
             self._export_session(text)
-            return
-        if text == "/raw" or text.startswith("/raw "):
-            parts = text.split(maxsplit=1)
-            raw_text = parts[1] if len(parts) > 1 else ""
-            if raw_text:
-                self._start_raw_request(raw_text)
-            else:
-                self._show_unknown_command(text)
-            return
             return
         if text.startswith("/import"):
             self._import_session(text)
@@ -405,14 +396,6 @@ class PoplarApp(App):
         self._streaming = True
         logger.info("Sending message to API")
         self._current_worker = self.run_worker(self._fetch_response, thread=True)
-
-    def _start_raw_request(self, text: str):
-        """Send a message to the LLM without tool definitions."""
-        user_msg = Message(role=Role.USER, content=text)
-        self.session.add_message(user_msg)
-        self.store.save_message(self.session.id, user_msg)
-        self._streaming = True
-        self._current_worker = self.run_worker(self._fetch_raw_response, thread=True)
 
     def _fetch_raw_response(self):
         """Worker: send message to LLM without tools, stream response."""

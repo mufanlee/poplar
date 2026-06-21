@@ -20,6 +20,7 @@ from poplar.core.agent_loop import AgentLoop, AgentTurn
 from poplar.utils import get_writable_dir, SPINNER_CHARS, is_thinking_message
 import json
 import logging
+import os
 import time
 from datetime import datetime
 
@@ -341,29 +342,6 @@ class PoplarApp(App):
         self._streaming = True
         logger.info("Sending message to API")
         self._current_worker = self.run_worker(self._fetch_response, thread=True)
-
-    def _fetch_raw_response(self):
-        """Worker: send message to LLM without tools, stream response."""
-        worker = get_current_worker()
-        api_messages = self._get_api_messages()
-        accumulated = []
-        try:
-            for chunk in self.provider.stream_sync(api_messages, tools=None):
-                if worker.is_cancelled:
-                    return
-                if chunk["type"] == "content":
-                    accumulated.append(chunk["text"])
-                    combined = "".join(accumulated)
-                    self.call_from_thread(self._update_streaming, combined)
-                elif chunk["type"] == "done":
-                    break
-        except Exception as e:
-            if not worker.is_cancelled:
-                self.call_from_thread(self._show_error, str(e))
-            return
-        content = "".join(accumulated)
-        if content and not worker.is_cancelled:
-            self.call_from_thread(self._finalize_streaming, content)
 
     def _animate_spinner(self):
         """Update spinner animation with braille character before 'Thinking...'."""
@@ -774,15 +752,10 @@ class PoplarApp(App):
             self._switch_provider(name)
 
         else:
-            models = self.provider.get_models()
+            # Show current provider info (no API call — avoids UI freeze)
             lines = [
                 f"**{self._provider_name}** · `{self.provider.model}`",
-                "",
-                "| Model |",
-                "|-------|",
             ]
-            for m in models:
-                lines.append(f"| {m.id} |")
             msg = Message(role=Role.ASSISTANT, content="\n".join(lines))
             chat_view = self.query_one(ChatView)
             chat_view.add_message(msg)
@@ -803,6 +776,16 @@ class PoplarApp(App):
             self._update_status_bar()
             self.notify(f"Switched to [bold]{name}[/bold] ({self.provider.model})")
             logger.info("Switched provider to %s (model: %s)", name, self.provider.model)
+
+            # Warn if API key is missing (except Ollama)
+            if name != "ollama":
+                api_key = prov_cfg.get("api_key") or os.getenv(f"{name.upper()}_API_KEY")
+                if not api_key:
+                    self.notify(
+                        f"[yellow]No API key for {name}.[/yellow] "
+                        f"Set in config or export {name.upper()}_API_KEY",
+                        timeout=8,
+                    )
         except Exception as e:
             logger.error("Failed to switch provider: %s", str(e), exc_info=True)
             self.notify(f"[red]Failed: {e}[/red]")

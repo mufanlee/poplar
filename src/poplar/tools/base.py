@@ -146,11 +146,17 @@ def execute_tool(name: str, arguments: Dict[str, Any]) -> ToolResult:
 
     # --- Post-execution cache ---
     if cache and ttl_key and result.success:
-        cache.set(cache_key, result.content, ttl, cache_type=f"tool_{name}")
+        try:
+            cache.set(cache_key, result.content, ttl, cache_type=f"tool_{name}")
+        except Exception:
+            logger.warning("Failed to cache tool result for %s", name, exc_info=True)
 
     # --- Invalidate related caches on write_file ---
     if cache and name == "write_file" and result.success:
-        # Invalidate all read_file caches (the written file may have changed)
-        cache.invalidate("tool:read_file:")
+        try:
+            cache.invalidate("tool:read_file:")
+            cache.invalidate("tool:list_directory:")
+        except Exception:
+            logger.warning("Failed to invalidate caches after write_file", exc_info=True)
 
     return result

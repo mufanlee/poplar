@@ -76,7 +76,7 @@ class ContextManager:
 
         # Don't include messages that are already summaries
         old_msgs = [m for m in old_msgs if not (
-            m.role == Role.SYSTEM and (m.content.startswith("[Summary") or m.content.startswith("*Summary"))
+            m.content.startswith("[Summary") or m.content.startswith("*Summary")
         )]
 
         return old_msgs, recent_msgs

@@ -158,6 +158,7 @@ class AgentLoop:
                     try:
                         args = json.loads(tc["arguments"])
                     except json.JSONDecodeError:
+                        logger.warning("Malformed tool arguments for %s: %s", name, tc.get("arguments", "")[:100])
                         args = {}
                     try:
                         result = execute_tool(name, args)

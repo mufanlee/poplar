@@ -1,7 +1,7 @@
 """Chat message display widgets."""
 
 from textual.widgets import Static
-from textual.containers import ScrollableContainer
+from textual.containers import ScrollableContainer, Horizontal
 from textual.reactive import reactive
 from rich.text import Text
 from rich.panel import Panel
@@ -44,8 +44,8 @@ def build_welcome():
     return panel
 
 
-class MessageWidget(Static):
-    """A single chat message — click anywhere to copy."""
+class MessageContent(Static):
+    """Renders the message body (Panel / Text)."""
 
     def __init__(self, message: Message):
         super().__init__()
@@ -53,7 +53,6 @@ class MessageWidget(Static):
         self._build()
 
     def _build(self):
-        """Render the message with copy hint."""
         msg = self._msg
         if msg.role == Role.USER:
             title = Text()
@@ -86,24 +85,58 @@ class MessageWidget(Static):
                 lines.append(f"  {line}")
             self.update(Text("\n".join(lines), style="dim"))
 
+
+class CopyButton(Static):
+    """Small clickable 'copy' label at the top-right of each message."""
+
+    def __init__(self, msg: Message):
+        super().__init__("copy")
+        self._msg = msg
+
     def on_click(self):
         if self._msg.content:
             self.app.copy_to_clipboard(self._msg.content)
             self.app.notify(f"📋 Copied: {self._msg.content[:60]}...")
 
     DEFAULT_CSS = """
+    CopyButton {
+        width: 5;
+        height: 1;
+        text-align: center;
+        color: $text-muted;
+    }
+    CopyButton:hover {
+        color: $text;
+        background: $accent 30%;
+    }
+    """
+
+
+class MessageWidget(Horizontal):
+    """A single chat message with a copy button at top-right."""
+
+    def __init__(self, message: Message):
+        super().__init__()
+        self._msg = message
+
+    def compose(self):
+        yield MessageContent(self._msg)
+        yield CopyButton(self._msg)
+
+    DEFAULT_CSS = """
     MessageWidget {
         height: auto;
         margin: 0 0 0 0;
     }
-    MessageWidget:hover {
-        background: $boost 10%;
+    MessageContent {
+        width: 1fr;
+        height: auto;
     }
     """
 
 
 class WelcomeWidget(Static):
-    """Full-screen welcome widget, shown when there are no messages."""
+    """Full-screen welcome widget."""
 
     DEFAULT_CSS = """
     WelcomeWidget {
@@ -132,48 +165,41 @@ class ChatView(ScrollableContainer):
     """
 
     def _rebuild(self, messages: list[Message]):
-        """Rebuild all message widgets (mounted directly to this ScrollableContainer)."""
         self.remove_children()
-
         if not messages:
             self.mount(WelcomeWidget())
             self.scroll_end(animate=False)
             return
-
         MAX_VISIBLE = 100
         display_msgs = messages[-MAX_VISIBLE:] if len(messages) > MAX_VISIBLE else messages
-
         if len(messages) > MAX_VISIBLE:
             self.mount(Static(
                 Text(f"  ... {len(messages) - MAX_VISIBLE} earlier messages hidden", style="dim")
             ))
-
         for msg in display_msgs:
-            self.mount(MessageWidget(msg))
-
+            w = MessageWidget(msg)
+            self.mount(w)
         self.scroll_end(animate=False)
 
     def watch_messages(self, messages: list[Message]):
-        """Called when messages reactive changes."""
         self._rebuild(messages)
 
     def add_message(self, message: Message):
-        """Append a message and trigger reactivity."""
         self.messages = self.messages + [message]
 
     def add_system_message(self, content: str):
-        """Add a system message directly without triggering full rebuild."""
         widget = MessageWidget(Message(role=Role.SYSTEM, content=content))
         self.mount(widget)
         self.scroll_end(animate=False)
         return widget
 
     def update_message_widget(self, predicate, make_message):
-        """Find the first MessageWidget matching predicate and update its content."""
         for child in self.children:
             if isinstance(child, MessageWidget) and predicate(child):
                 new_msg = make_message(child)
                 child._msg = new_msg
-                child._build()
+                for sub in child.query(MessageContent):
+                    sub._msg = new_msg
+                    sub._build()
                 return
         self.messages = list(self.messages)

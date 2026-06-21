@@ -1,10 +1,38 @@
-# Poplar Configuration Example
-# This file is automatically created at ~/.poplar/config.yaml on first run
+# Poplar Full Configuration Example
+# Copy to ~/.poplar/config.yaml and edit
 
 # Language: en (English) or zh (Chinese)
 language: en
 
-# Model: deepseek-chat or deepseek-coder
-model: deepseek-chat
+# Default provider: deepseek, openai, anthropic, or ollama
+provider: deepseek
 
-# Note: API key should be set via environment variable DEEPSEEK_API_KEY
+# Per-provider settings
+providers:
+  deepseek:
+    api_key: DEEPSEEK_API_KEY      # or set env DEEPSEEK_API_KEY
+    model: deepseek-chat
+  openai:
+    api_key: OPENAI_API_KEY        # or set env OPENAI_API_KEY
+    model: gpt-4o
+  anthropic:
+    api_key: ANTHROPIC_API_KEY     # or set env ANTHROPIC_API_KEY
+    model: claude-3-5-sonnet-20241022
+  ollama:
+    model: llama3
+    base_url: http://localhost:11434
+
+# Cache settings
+cache:
+  enabled: true
+  max_memory_items: 100
+  tool_read_file_ttl: 300        # 5 min
+  tool_list_dir_ttl: 30          # 30 sec
+  api_response_ttl: 3600         # 1 hour
+
+# Context compression settings
+context:
+  max_tokens: 32768
+  auto_compress_at: 0.7
+  keep_recent_exchanges: 3
+  max_turns: 10

@@ -12,10 +12,10 @@ from poplar.providers import create_provider, get_available_providers
 from poplar.i18n import t
 from poplar.config import get_cache_config, get_context_config, get_active_provider_name, get_provider_config, save_config, load_config
 from poplar.persistence.store import SessionStore
-from poplar.tools.base import TOOL_DEFINITIONS, execute_tool, ToolResult
-from poplar.persistence.cache import hash_messages, get_shared_cache
+from poplar.tools.base import ToolResult
 from poplar.core.context import ContextManager
 from poplar.core.stats import stats
+from poplar.core.agent_loop import AgentLoop, AgentTurn
 import json
 import logging
 import time
@@ -481,157 +481,89 @@ class PoplarApp(App):
         return [system_msg] + meaningful
 
     def _fetch_response(self):
-        """Worker function - supports tool calling with multi-turn and API caching."""
+        """Worker function — delegates to AgentLoop for LLM+tool orchestration."""
         worker = get_current_worker()
-        max_turns = get_context_config().get("max_turns", 10)
 
-        # Cache setup (only on first turn)
-        api_cache = get_shared_cache() if get_cache_config().get("enabled", True) else None
-        api_cache_key = None
-        api_cache_ttl = get_cache_config().get("api_response_ttl", 3600)
+        loop = AgentLoop(self.provider)
 
-        for turn in range(max_turns):
+        for turn_result in loop.run_iter(
+            self.session,
+            on_stream=lambda content: self.call_from_thread(self._update_streaming, content),
+        ):
             if worker.is_cancelled:
+                loop.cancel()
                 return
 
-            accumulated = []
-            tool_calls = []
-            last_error = None
-
-            stats.start_api_call()
-
-            # Check API cache on first turn
-            if turn == 0 and api_cache:
-                api_messages = self._get_api_messages()
-                api_cache_key = "api:" + hash_messages(api_messages)
-                cached = api_cache.get(api_cache_key)
-                if cached is not None:
-                    logger.info("API cache hit for %s", api_cache_key)
-                    stats.record_cache_hit()
-                    self.call_from_thread(self._stop_spinner)
-                    if not worker.is_cancelled:
-                        self.call_from_thread(self._finalize_streaming, cached)
-                        self.call_from_thread(self.notify, "📦 [dim]Cached response[/dim]")
-                    return
-
-            for attempt in range(3):
-                if worker.is_cancelled:
-                    return
-                try:
-                    api_messages = self._get_api_messages()
-                    for chunk in self.provider.stream_sync(api_messages, tools=TOOL_DEFINITIONS):
-                        if worker.is_cancelled:
-                            return
-                        if chunk["type"] == "content":
-                            accumulated.append(chunk["text"])
-                            self.call_from_thread(self._update_streaming, "".join(accumulated))
-                        elif chunk["type"] == "tool_call":
-                            tool_calls.append(chunk)
-                    break  # Success
-                except Exception as e:
-                    last_error = e
-                    if not self._is_retryable(str(e)):
-                        break
-                    if attempt < 2:
-                        wait = (2 ** attempt) * 0.5
-                        logger.warning("Retry %d/3 after %.1fs", attempt + 1, wait)
-                        time.sleep(wait)
-                        accumulated = []
-                        tool_calls = []
-
-            if last_error and not tool_calls and not accumulated:
-                logger.error("API call failed: %s", str(last_error), exc_info=True)
+            # --- Cached response ---
+            if turn_result.cached:
+                self.call_from_thread(self._stop_spinner)
                 if not worker.is_cancelled:
-                    self.call_from_thread(self._show_error, str(last_error))
+                    self.call_from_thread(self._finalize_streaming, turn_result.content)
+                    self.call_from_thread(self.notify, "📦 [dim]Cached response[/dim]")
                 return
 
-            content = "".join(accumulated)
+            # --- Error ---
+            if turn_result.error:
+                if not worker.is_cancelled:
+                    self.call_from_thread(self._show_error, turn_result.error)
+                return
 
-            if tool_calls:
-                # Build proper tool_calls format for assistant message
-                formatted_calls = []
-                for tc in tool_calls:
-                    try:
-                        parsed_args = json.loads(tc["arguments"])
-                    except json.JSONDecodeError:
-                        parsed_args = {}
-                    formatted_calls.append({
-                        "id": tc["id"],
-                        "type": "function",
-                        "function": {
-                            "name": tc["name"],
-                            "arguments": tc["arguments"]
-                        }
-                    })
+            # --- Tool calls ---
+            if turn_result.tool_calls:
+                formatted = turn_result.tool_calls
+                tool_names = [tc["function"]["name"] for tc in formatted]
+                text = turn_result.content
+                if not text.strip() and formatted:
+                    text = "Called tool: `" + ", ".join(tool_names) + "`"
 
-                # Add assistant message with tool_calls (content may be None from API)
-                if not content.strip() and formatted_calls:
-                    tool_names = [tc["function"]["name"] for tc in formatted_calls]
-                    content = f"Called tool: `{', '.join(tool_names)}`"
+                # Persist assistant message with tool_calls
                 assistant_msg = Message(
                     role=Role.ASSISTANT,
-                    content=content or "",
-                    tool_calls=formatted_calls if formatted_calls else None
+                    content=text or "",
+                    tool_calls=formatted if formatted else None,
                 )
                 self.session.add_message(assistant_msg)
                 self.store.save_message(self.session.id, assistant_msg)
-
-                # Clear stale streaming reference before executing tools
                 self._streaming_msg = None
 
-                # Execute tools and add TOOL messages
-                for tc in tool_calls:
-                    name = tc["name"]
-                    try:
-                        args = json.loads(tc["arguments"])
-                    except json.JSONDecodeError:
-                        args = {}
-                    try:
-                        result = execute_tool(name, args)
-                    except Exception as e:
-                        result = ToolResult(content=f"Tool execution error: {str(e)}", success=False)
-                    stats.record_tool_call()
-                    # Visual marker for cached tool results
-                    display_content = f"[dim][cached][/dim] {result.content}" if getattr(result, '_cached', False) else result.content
+                # Persist tool results
+                for i, tc_result in enumerate(turn_result.tool_results):
+                    if i < len(formatted):
+                        tc_name = formatted[i]["function"]["name"]
+                        tc_id = formatted[i]["id"]
+                    else:
+                        tc_name = "unknown"
+                        tc_id = f"tc_{i}"
+
                     tool_msg = Message(
                         role=Role.TOOL,
-                        content=result.content,
-                        tool_call_id=tc["id"],
-                        name=name
+                        content=tc_result.content,
+                        tool_call_id=tc_id,
+                        name=tc_name,
                     )
                     self.session.add_message(tool_msg)
                     self.store.save_message(self.session.id, tool_msg)
-                    self.call_from_thread(self._show_tool_result, name, display_content)
+                    # Show cached marker if applicable
+                    display = tc_result.content
+                    if getattr(tc_result, "_cached", False):
+                        display = f"[dim][cached][/dim] {display}"
+                    self.call_from_thread(self._show_tool_result, tc_name, display)
+                    stats.record_tool_call()
 
                 continue  # Next turn
 
-            if content:
-                # Cache the response (only for pure Q&A, no tool calls)
-                if api_cache and api_cache_key and not tool_calls:
-                    api_cache.set(api_cache_key, content, api_cache_ttl, cache_type="api_response")
-                self.call_from_thread(self._finalize_streaming, content)
-                return
-            else:
-                if turn == 0:
-                    self.call_from_thread(self._show_error, "Empty response from API")
+            # --- Final text response ---
+            if turn_result.content:
+                if not worker.is_cancelled:
+                    self.call_from_thread(self._finalize_streaming, turn_result.content)
                 return
 
-        # Exhausted max_turns — model returned only tool_calls, no text
-        logger.warning("Max turns (%d) reached without content response", max_turns)
-        if not worker.is_cancelled:
-            self.call_from_thread(self._finalize_streaming,
-                                  "Tool execution completed. You can continue the conversation.")
-
-    def _is_retryable(self, error_msg: str) -> bool:
-        """Check if an API error is retryable."""
-        not_retryable = ["400", "401", "402", "422", "invalid", "auth", "authentication", "balance", "insufficient"]
-        msg_lower = error_msg.lower()
-        if any(kw in msg_lower for kw in not_retryable):
-            return False
-        retryable = ["timeout", "connection", "rate_limit", "server_error",
-                     "429", "500", "502", "503", "overloaded", "busy"]
-        return any(kw in msg_lower for kw in retryable)
-
+            # Fallback
+            if not worker.is_cancelled:
+                self.call_from_thread(
+                    self._finalize_streaming,
+                    "Tool execution completed. You can continue the conversation.",
+                )
     def _show_tool_result(self, name: str, content: str):
         """Show tool execution result as a system message (mount directly, no reactive)."""
         chat_view = self.query_one(ChatView)

@@ -343,6 +343,11 @@ class PoplarApp(App):
         if text.startswith("/export"):
             self._export_session(text)
             return
+        if text.startswith("/raw "):
+            raw_text = text[5:].strip()
+            if raw_text:
+                self._start_raw_request(raw_text)
+            return
         if text.startswith("/import"):
             self._import_session(text)
             return
@@ -396,6 +401,37 @@ class PoplarApp(App):
         self._streaming = True
         logger.info("Sending message to API")
         self._current_worker = self.run_worker(self._fetch_response, thread=True)
+
+    def _start_raw_request(self, text: str):
+        """Send a message to the LLM without tool definitions."""
+        user_msg = Message(role=Role.USER, content=text)
+        self.session.add_message(user_msg)
+        self.store.save_message(self.session.id, user_msg)
+        self._streaming = True
+        self._current_worker = self.run_worker(self._fetch_raw_response, thread=True)
+
+    def _fetch_raw_response(self):
+        """Worker: send message to LLM without tools, stream response."""
+        worker = get_current_worker()
+        api_messages = self._get_api_messages()
+        accumulated = []
+        try:
+            for chunk in self.provider.stream_sync(api_messages, tools=None):
+                if worker.is_cancelled:
+                    return
+                if chunk["type"] == "content":
+                    accumulated.append(chunk["text"])
+                    combined = "".join(accumulated)
+                    self.call_from_thread(self._update_streaming, combined)
+                elif chunk["type"] == "done":
+                    break
+        except Exception as e:
+            if not worker.is_cancelled:
+                self.call_from_thread(self._show_error, str(e))
+            return
+        content = "".join(accumulated)
+        if content and not worker.is_cancelled:
+            self.call_from_thread(self._finalize_streaming, content)
 
     def _animate_spinner(self):
         """Update spinner animation with braille character before 'Thinking...'."""

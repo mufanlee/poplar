@@ -3,7 +3,6 @@
 from textual.widgets import Static
 from textual.containers import ScrollableContainer
 from textual.reactive import reactive
-from rich.align import Align
 from rich.text import Text
 from rich.panel import Panel
 from rich.markdown import Markdown
@@ -37,16 +36,16 @@ def build_welcome():
     body.append(f"{t('welcome_start')}\n", style="bold green")
 
     panel = Panel(
-        Align.center(body),
+        Text(body),
         title=t("welcome_title"),
         border_style="cyan",
         padding=(1, 2),
     )
-    return Align.center(panel)
+    return panel
 
 
 class MessageWidget(Static):
-    """A single chat message."""
+    """A single chat message — click anywhere to copy."""
 
     def __init__(self, message: Message):
         super().__init__()
@@ -54,7 +53,7 @@ class MessageWidget(Static):
         self._build()
 
     def _build(self):
-        """Render the message with copy hint in title."""
+        """Render the message with copy hint."""
         msg = self._msg
         if msg.role == Role.USER:
             title = Text()
@@ -87,10 +86,18 @@ class MessageWidget(Static):
                 lines.append(f"  {line}")
             self.update(Text("\n".join(lines), style="dim"))
 
+    def on_click(self):
+        if self._msg.content:
+            self.app.copy_to_clipboard(self._msg.content)
+            self.app.notify(f"📋 Copied: {self._msg.content[:60]}...")
+
     DEFAULT_CSS = """
     MessageWidget {
         height: auto;
         margin: 0 0 0 0;
+    }
+    MessageWidget:hover {
+        background: $boost 10%;
     }
     """
 
@@ -123,7 +130,6 @@ class ChatView(ScrollableContainer):
         height: 1fr;
     }
     """
-
 
     def _rebuild(self, messages: list[Message]):
         """Rebuild all message widgets (mounted directly to this ScrollableContainer)."""
@@ -163,17 +169,11 @@ class ChatView(ScrollableContainer):
         return widget
 
     def update_message_widget(self, predicate, make_message):
-        """Find the first MessageWidget matching predicate and update its content.
-
-        Args:
-            predicate: callable(MessageWidget) -> bool
-            make_message: callable(MessageWidget) -> Message, returns updated message
-        """
+        """Find the first MessageWidget matching predicate and update its content."""
         for child in self.children:
             if isinstance(child, MessageWidget) and predicate(child):
                 new_msg = make_message(child)
                 child._msg = new_msg
                 child._build()
                 return
-        # Fallback: trigger full rebuild
         self.messages = list(self.messages)

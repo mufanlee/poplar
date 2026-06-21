@@ -623,9 +623,13 @@ class PoplarApp(App):
                                   "Tool execution completed. You can continue the conversation.")
 
     def _is_retryable(self, error_msg: str) -> bool:
-        """Check if an API error is retryable (network, rate limit, server error)."""
-        retryable = ["timeout", "connection", "rate_limit", "server_error", "503", "502", "429", "overloaded"]
+        """Check if an API error is retryable."""
+        not_retryable = ["400", "401", "402", "422", "invalid", "auth", "authentication", "balance", "insufficient"]
         msg_lower = error_msg.lower()
+        if any(kw in msg_lower for kw in not_retryable):
+            return False
+        retryable = ["timeout", "connection", "rate_limit", "server_error",
+                     "429", "500", "502", "503", "overloaded", "busy"]
         return any(kw in msg_lower for kw in retryable)
 
     def _show_tool_result(self, name: str, content: str):

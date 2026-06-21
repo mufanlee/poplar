@@ -462,7 +462,7 @@ class PoplarApp(App):
     def _fetch_response(self):
         """Worker function - supports tool calling with multi-turn and API caching."""
         worker = get_current_worker()
-        max_turns = 3
+        max_turns = get_context_config().get("max_turns", 10)
 
         # Cache setup (only on first turn)
         api_cache = get_shared_cache() if get_cache_config().get("enabled", True) else None

@@ -643,6 +643,9 @@ class PoplarApp(App):
         ctx.apply_compression(self.session, summary, recent_msgs)
         self._total_tokens = ctx.get_cumulative_token_count(self.session)
 
+        # Persist compressed session to store
+        self.store.replace_all_messages(self.session.id, self.session.messages)
+
         # Rebuild chat view from updated session
         chat_view = self.query_one(ChatView)
         chat_view.messages = list(self.session.messages)

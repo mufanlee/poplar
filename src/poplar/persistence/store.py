@@ -148,13 +148,7 @@ class SessionStore:
         now = datetime.now().isoformat()
         conn = self._get_conn()
         try:
-            tool_calls_json = json.dumps(message.tool_calls) if message.tool_calls else None
-            conn.execute(
-                "INSERT INTO messages (session_id, role, content, tool_calls, tool_call_id, name, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (session_id, message.role.value, message.content or "",
-                 tool_calls_json, message.tool_call_id, message.name, now),
-            )
+            self._insert_message(conn, session_id, message, now)
             conn.execute(
                 "UPDATE sessions SET updated_at = ? WHERE id = ?",
                 (now, session_id),
@@ -163,12 +157,36 @@ class SessionStore:
         finally:
             conn.close()
 
+    def _insert_message(self, conn, session_id: str, message: Message, created_at: str = None):
+        """Insert a single message row (used by save_message and replace_all_messages)."""
+        now = created_at or datetime.now().isoformat()
+        tool_calls_json = json.dumps(message.tool_calls) if message.tool_calls else None
+        conn.execute(
+            "INSERT INTO messages (session_id, role, content, tool_calls, tool_call_id, name, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (session_id, message.role.value, message.content or "",
+             tool_calls_json, message.tool_call_id, message.name, now),
+        )
+
     def delete_session(self, session_id: str):
         """Delete a session and all its messages."""
         conn = self._get_conn()
         try:
             conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
             conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
+    def replace_all_messages(self, session_id: str, messages: list):
+        """Atomically replace all messages for a session (used after compression)."""
+        conn = self._get_conn()
+        try:
+            conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+            now = datetime.now().isoformat()
+            for msg in messages:
+                self._insert_message(conn, session_id, msg, now)
+            conn.execute("UPDATE sessions SET updated_at = ? WHERE id = ?", (now, session_id))
             conn.commit()
         finally:
             conn.close()

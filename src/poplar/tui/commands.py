@@ -34,7 +34,7 @@ COMMANDS: List[Command] = [
 ]
 
 # Commands that should NOT be echoed as a user message in the chat
-UI_ONLY_COMMANDS = frozenset({"/help", "/quit", "/session", "/clear"})
+UI_ONLY_COMMANDS = frozenset({"/help", "/quit", "/session", "/clear", "/compress"})
 
 
 def find_command(text: str) -> Optional[Command]:

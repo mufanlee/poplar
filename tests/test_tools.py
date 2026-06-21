@@ -1,6 +1,15 @@
 """Tests for tool execution."""
 
+import pytest
+from unittest.mock import patch
 from poplar.tools.base import execute_tool, ToolResult
+
+
+@pytest.fixture(autouse=True)
+def _trust_workspace():
+    """Mock trust check so tests can run without actual trust setup."""
+    with patch("poplar.core.trust.is_workspace_trusted", return_value=True):
+        yield
 
 
 def test_read_file(tmp_path):

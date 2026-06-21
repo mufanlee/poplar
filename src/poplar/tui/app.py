@@ -17,6 +17,8 @@ from poplar.tools.base import ToolResult, TOOL_RESULT_PREVIEW_CHARS
 from poplar.core.context import ContextManager, estimate_tokens
 from poplar.core.stats import stats
 from poplar.core.agent_loop import AgentLoop, AgentTurn
+from poplar.core.trust import is_workspace_trusted, trust_workspace
+from poplar.tui.trust_screen import TrustScreen
 from poplar.utils import get_writable_dir, SPINNER_CHARS, is_thinking_message
 import json
 import logging
@@ -167,7 +169,20 @@ class PoplarApp(App):
 
     def on_mount(self):
         """Called when the app is mounted."""
-        self._load_session_messages()
+        from pathlib import Path
+        if not is_workspace_trusted(Path.cwd()):
+            self.push_screen(TrustScreen(Path.cwd()), self._handle_trust_result)
+        else:
+            self._load_session_messages()
+
+    def _handle_trust_result(self, trusted: bool):
+        """Handle result of workspace trust prompt."""
+        from pathlib import Path
+        if trusted:
+            trust_workspace(Path.cwd())
+            self._load_session_messages()
+        else:
+            self.exit()
 
     def _load_session_messages(self):
         """Load current session messages into ChatView."""

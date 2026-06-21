@@ -117,6 +117,15 @@ TOOL_DEFINITIONS = [
 
 def execute_tool(name: str, arguments: Dict[str, Any]) -> ToolResult:
     """Execute a named tool with given arguments, with caching support."""
+    # --- Trust check ---
+    from pathlib import Path
+    from poplar.core.trust import is_workspace_trusted
+    if not is_workspace_trusted(Path.cwd()):
+        return ToolResult(
+            content="Workspace is not trusted. Tool execution is disabled.",
+            success=False,
+        )
+
     from poplar.tools.builtin import BUILTIN_TOOLS
     tool = BUILTIN_TOOLS.get(name)
     if not tool:

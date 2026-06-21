@@ -555,14 +555,8 @@ class PoplarApp(App):
                 self.session.add_message(assistant_msg)
                 self.store.save_message(self.session.id, assistant_msg)
 
-                # Show tool call in chat view
-                if tool_calls:
-                    tool_names = [tc["name"] for tc in tool_calls]
-                    msg_content = f"**Called tool:** `{', '.join(tool_names)}`"
-                    if content.strip():
-                        msg_content = f"{content}\n\n**Called tool:** `{', '.join(tool_names)}`"
-                    display_msg = Message(role=Role.ASSISTANT, content=msg_content)
-                    self.call_from_thread(self._show_assistant_msg, display_msg)
+                # Clear stale streaming reference before executing tools
+                self._streaming_msg = None
 
                 # Execute tools and add TOOL messages
                 for tc in tool_calls:
@@ -616,13 +610,6 @@ class PoplarApp(App):
         preview = content[:500] + "..." if len(content) > 500 else content
         tool_msg = Message(role=Role.SYSTEM, content=f"{t('tool_result_prefix', name=name)}\n{preview}")
         w = MessageWidget(tool_msg)
-        chat_view.mount(w)
-        chat_view.scroll_end(animate=False)
-
-    def _show_assistant_msg(self, msg: Message):
-        """Display an assistant message in the chat view."""
-        chat_view = self.query_one(ChatView)
-        w = MessageWidget(msg)
         chat_view.mount(w)
         chat_view.scroll_end(animate=False)
 

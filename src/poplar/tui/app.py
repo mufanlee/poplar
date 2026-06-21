@@ -616,16 +616,14 @@ class PoplarApp(App):
         worker = get_current_worker()
         ctx = self.context_mgr
 
-        old_msgs, _ = ctx.get_summarizable_messages(
+        old_msgs, recent_msgs = ctx.get_summarizable_messages(
             self.session.messages
         )
 
         try:
-            # Build summarization prompt
             prompt = ctx.build_summary_prompt(old_msgs)
             logger.info("Compressing %d messages...", len(old_msgs))
 
-            # Call API (blocks this thread, not the UI)
             response = self.provider.chat(
                 [Message(role=Role.USER, content=prompt)]
             )
@@ -633,34 +631,27 @@ class PoplarApp(App):
                 return
 
             summary = response.content.strip()
-
-            # Apply compression on main thread
-            self.call_from_thread(self._apply_compression, summary)
+            self.call_from_thread(self._apply_compression, summary, recent_msgs)
 
         except Exception as e:
             logger.error("Compression failed: %s", str(e), exc_info=True)
             self.call_from_thread(self.notify, f"[red]{t('error')}: {e}[/red]")
 
-    def _apply_compression(self, summary: str):
-        """Main thread: append summary to session without removing old messages."""
+    def _apply_compression(self, summary: str, recent_msgs: list):
+        """Main thread: replace old messages with summary, keep recent ones."""
         ctx = self.context_mgr
-        summary_msg = Message(
-            role=Role.ASSISTANT,
-            content=f"*Summary of earlier conversation*\n\n{summary}\n\n---\n📦 **{t('compress_done')}**"
-        )
-        # Add summary as new message, keep all old messages intact
-        self.session.add_message(summary_msg)
-        self.store.save_message(self.session.id, summary_msg)
+        ctx.apply_compression(self.session, summary, recent_msgs)
         self._total_tokens = ctx.get_cumulative_token_count(self.session)
 
-        # Append to chat view
+        # Rebuild chat view from updated session
         chat_view = self.query_one(ChatView)
-        chat_view.add_message(summary_msg)
+        chat_view.messages = list(self.session.messages)
         chat_view.scroll_end(animate=False)
 
         self._update_status_bar()
         self.notify(t("compress_done"))
-        logger.info("Compression complete")
+        logger.info("Compression complete: %d messages after compression",
+                     len(self.session.messages))
 
     def _show_context_info(self):
         """Show current context status as a system message."""

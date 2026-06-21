@@ -648,11 +648,10 @@ class PoplarApp(App):
         # Persist compressed session to store
         self.store.replace_all_messages(self.session.id, self.session.messages)
 
-        # Force full rebuild (message count decreased, incremental path would skip cleanup)
+        # Rebuild — reset counter so _rebuild does full clear + re-render
         chat_view = self.query_one(ChatView)
         chat_view._rendered_count = 0
         chat_view.messages = list(self.session.messages)
-        chat_view.scroll_end(animate=False)
 
         self._update_status_bar()
         self.notify(t("compress_done"))

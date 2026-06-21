@@ -1,13 +1,7 @@
 """Internationalization support for Poplar."""
 
 import os
-from poplar.config import (
-    DEFAULT_LANGUAGE,
-    get_config_path,
-    init_config,
-    load_config,
-    save_config,
-)
+from poplar.config import DEFAULT_LANGUAGE, load_config, save_config
 
 TRANSLATIONS = {
     "en": {

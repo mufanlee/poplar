@@ -1,10 +1,8 @@
 """OpenAI provider — uses the openai SDK (same pattern as DeepSeek)."""
 
-import json
-import os
 import openai
 from typing import Optional, List, AsyncIterator, Iterator, Dict, Any
-from poplar.providers.base import Provider, ChatResponse, ModelInfo
+from poplar.providers.base import ChatResponse, ModelInfo
 from poplar.core.session import Message
 
 

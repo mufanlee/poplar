@@ -1,8 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
 from textual.widgets import Footer, Header, Static
-from textual.worker import Worker, get_current_worker
+from textual.worker import get_current_worker
 from poplar.tui.chat_view import ChatView, MessageWidget
 from poplar.tui.composer import Composer, ComposerSubmit
 from poplar.tui.session_picker import SessionPicker
@@ -14,10 +13,9 @@ from poplar.i18n import t
 from poplar.config import get_cache_config, get_context_config, get_active_provider_name, get_provider_config, save_config, load_config
 from poplar.persistence.store import SessionStore
 from poplar.tools.base import TOOL_DEFINITIONS, execute_tool, ToolResult
-from poplar.persistence.cache import CacheManager, hash_messages, get_shared_cache
+from poplar.persistence.cache import hash_messages, get_shared_cache
 from poplar.core.context import ContextManager
 from poplar.core.stats import stats
-import os
 import json
 import logging
 import time
@@ -796,7 +794,7 @@ class PoplarApp(App):
 
     def _show_context_info(self):
         """Show current context status as a system message."""
-        from poplar.core.context import estimate_tokens, messages_token_count
+        from poplar.core.context import messages_token_count
 
         total_msgs = len(self.session.messages)
         user_msgs = sum(1 for m in self.session.messages if m.role == Role.USER)

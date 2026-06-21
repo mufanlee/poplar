@@ -1,8 +1,7 @@
 import os
-import json
 import openai
 from typing import Optional, List, AsyncIterator, Iterator, Dict, Any
-from poplar.providers.base import Provider, ChatResponse, ModelInfo
+from poplar.providers.base import ChatResponse, ModelInfo
 from poplar.core.session import Message
 
 

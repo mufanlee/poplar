@@ -1,7 +1,6 @@
 """Anthropic provider — uses the anthropic SDK for Claude models."""
 
 import json
-import os
 from typing import Optional, List, AsyncIterator, Iterator, Dict, Any
 from poplar.providers.base import ChatResponse, ModelInfo
 from poplar.core.session import Message
@@ -14,9 +13,6 @@ class AnthropicProvider:
         self.api_key = api_key
         self.base_url = base_url
         self.model = model
-
-        for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']:
-            os.environ.pop(var, None)
 
     def _client(self):
         import anthropic

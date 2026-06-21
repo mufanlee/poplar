@@ -1,7 +1,6 @@
 """Ollama provider — connects to local Ollama instance."""
 
 import json
-import os
 from typing import Optional, List, AsyncIterator, Iterator, Dict, Any
 from poplar.providers.base import ChatResponse, ModelInfo
 from poplar.core.session import Message

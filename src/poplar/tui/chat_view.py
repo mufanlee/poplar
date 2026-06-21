@@ -55,9 +55,7 @@ class MessageContent(Static):
     def _build(self):
         msg = self._msg
         if msg.role == Role.USER:
-            title = Text()
-            title.append(f"👤 {t('title_you')} ")
-            title.append("copy", style="dim italic")
+            title = f"👤 {t('title_you')}"
             self.update(Panel(
                 Text(msg.content),
                 title=title,
@@ -65,9 +63,7 @@ class MessageContent(Static):
                 padding=(0, 1),
             ))
         elif msg.role == Role.ASSISTANT:
-            title = Text()
-            title.append(f"🤖 {t('title_assistant')} ")
-            title.append("copy", style="dim italic")
+            title = f"🤖 {t('title_assistant')}"
             self.update(Panel(
                 Markdown(msg.content),
                 title=title,

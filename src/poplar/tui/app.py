@@ -544,6 +544,9 @@ class PoplarApp(App):
                     })
 
                 # Add assistant message with tool_calls (content may be None from API)
+                if not content.strip() and formatted_calls:
+                    tool_names = [tc["function"]["name"] for tc in formatted_calls]
+                    content = f"Called tool: `{', '.join(tool_names)}`"
                 assistant_msg = Message(
                     role=Role.ASSISTANT,
                     content=content or "",

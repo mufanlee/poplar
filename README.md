@@ -42,11 +42,11 @@ Poplar (杨树) is a terminal-based AI chat application built with Python and Te
 - **Phase 2 (Feature-Complete)**: Tools, streaming, persistence, multi-session ✅
 - **Phase 3 (Production-Ready)**: Multi-provider, export/import, caching, context compression ✅
 
-## Quick Start (Phase 1 - MVP)
+## Quick Start
 
 ### Prerequisites
 - Python 3.10+
-- DeepSeek API key
+- An API key from at least one supported provider
 
 ### Installation
 
@@ -56,17 +56,22 @@ pip install -e .
 
 ### Configuration
 
-Copy `.env.example` to `.env` and add your API key:
+Create `~/.poplar/config.yaml`:
 
-```bash
-cp .env.example .env
-# Edit .env and add your DEEPSEEK_API_KEY
+```yaml
+language: en
+provider: deepseek
+providers:
+  deepseek:
+    api_key: sk-xxxxxxxxxxxx    # your DeepSeek API key
+    model: deepseek-chat
 ```
 
-Or set environment variable:
+Or set environment variables:
 
 ```bash
-export DEEPSEEK_API_KEY=your-api-key-here
+export DEEPSEEK_API_KEY=sk-xxxxxxxxxxxx
+export POPLAR_LANGUAGE=zh       # optional, for Chinese UI
 ```
 
 ### Usage
@@ -86,24 +91,29 @@ python -m poplar.main
 - `Enter` - Send message
 - `Ctrl+Enter` - New line in input
 - `Ctrl+S` - Open session picker (switch/create/delete/rename sessions)
-- `Ctrl+C` - Copy last assistant response
+- `Ctrl+C` - Copy last assistant response or click `copy` button on any message
 - `Ctrl+Q` - Quit application
 - `ESC` - Cancel ongoing API request
 
 ### Commands
 
 Type these in the composer:
+- `/help` — Show all available commands
+- `/quit` — Exit application
 - `/context` — Show session context info (token count, messages, compression status)
 - `/compress` — Manually compress conversation via LLM summarization
+- `/stats` — Show performance statistics
+- `/session` — Open session picker
+- `/clear` — Clear current session
+- `/export <path>` — Export current session to JSON file
+- `/import <path>` — Import session from JSON file
 - `/provider` — Show current provider and model
 - `/provider list` — List all available providers
 - `/provider set <name>` — Switch provider at runtime
-- `/export <path>` — Export current session to JSON file
-- `/import <path>` — Import session from JSON file
 
-### Configuration
+### Configuration Reference
 
-Configuration file is automatically created at `~/.poplar/config.yaml` on first run:
+Configuration file at `~/.poplar/config.yaml`:
 
 ```yaml
 # Language: en (English) or zh (Chinese)
@@ -112,17 +122,20 @@ language: en
 # Default provider: deepseek, openai, anthropic, or ollama
 provider: deepseek
 
-# Per-provider settings (model, optional base_url)
+# Per-provider settings
 providers:
   deepseek:
+    api_key: sk-xxx              # or set via DEEPSEEK_API_KEY env
     model: deepseek-chat
   openai:
+    api_key: sk-xxx              # or set via OPENAI_API_KEY env
     model: gpt-4o
   anthropic:
+    api_key: sk-xxx              # or set via ANTHROPIC_API_KEY env
     model: claude-3-5-sonnet-20241022
   ollama:
     model: llama3
-    base_url: http://localhost:11434
+    base_url: http://localhost:11434  # no API key needed
 
 # Cache settings
 cache:
@@ -137,17 +150,18 @@ context:
   max_tokens: 32768
   auto_compress_at: 0.7
   keep_recent_exchanges: 3
+  max_turns: 10
 ```
 
-You can also use environment variables:
+Environment variables:
 
 ```bash
-# API keys (required for their respective providers)
+# API keys
 export DEEPSEEK_API_KEY=sk-...
 export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-...
 
-# Switch language
+# Language override
 export POPLAR_LANGUAGE=zh
 ```
 

@@ -96,28 +96,20 @@ class CopyButton(Static):
     """
 
 
-class MessageBar(Static):
-    """Colored left bar indicating message role."""
-
-    def __init__(self, role: Role):
-        super().__init__("")
-        bar_class = {
-            Role.USER: "bar-user",
-            Role.ASSISTANT: "bar-assistant",
-            Role.TOOL: "bar-tool",
-        }.get(role, "bar-system")
-        self.add_class(bar_class)
-
-
 class MessageWidget(Horizontal):
     """A single chat message: [colored bar] [content] [copy button]."""
 
     def __init__(self, message: Message):
         super().__init__()
         self._msg = message
+        bar_color = {
+            Role.USER: "$accent",
+            Role.ASSISTANT: "$success",
+            Role.TOOL: "$text-disabled",
+        }.get(message.role, "$warning")
+        self.styles.border_left = ("thick", bar_color)
 
     def compose(self):
-        yield MessageBar(self._msg.role)
         yield MessageContent(self._msg)
         yield CopyButton(self._msg)
 
@@ -125,16 +117,8 @@ class MessageWidget(Horizontal):
     MessageWidget {
         height: auto;
         margin: 1 0 0 0;
+        padding: 0 0 0 1;
     }
-    MessageBar {
-        width: 1;
-        min-width: 1;
-        dock: left;
-    }
-    .bar-user { background: $accent; }
-    .bar-assistant { background: $success; }
-    .bar-tool { background: $text-disabled; }
-    .bar-system { background: $warning; }
     MessageContent {
         width: 1fr;
         height: auto;

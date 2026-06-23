@@ -58,16 +58,14 @@ class MessageContent(Static):
         if msg.role == Role.USER:
             content = Text()
             content.append("│ ", style="bold cyan")
-            content.append("👤 You\n\n")
-            content.append(msg.content)
+            content.append("👤 You\n")
+            for line in msg.content.split("\n"):
+                content.append(f"│ {line}\n", style="cyan")
             self.update(content)
         elif msg.role == Role.ASSISTANT:
-            from rich.table import Table
-            tbl = Table.grid(expand=True)
-            tbl.add_column("bar", width=2, style="green")
-            tbl.add_column("content", ratio=1)
-            tbl.add_row(Text("│"), Markdown(msg.content))
-            self.update(tbl)
+            from rich.console import Group
+            label = Text("│ 🤖 Assistant", style="bold green")
+            self.update(Group(label, Markdown(msg.content)))
         elif msg.role == Role.SYSTEM:
             self.update(Text(f"  {msg.content}", style="dim yellow"))
         elif msg.role == Role.TOOL:
@@ -77,7 +75,7 @@ class MessageContent(Static):
             content.append("│ ", style="dim")
             content.append(f"🔧 {name}\n", style="bold dim")
             for line in preview.split("\n")[:10]:
-                content.append(f"  {line}\n", style="dim")
+                content.append(f"│ {line}\n", style="dim")
             self.update(content)
 
 

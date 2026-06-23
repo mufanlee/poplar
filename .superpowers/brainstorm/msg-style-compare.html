@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poplar 消息设计对比</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: monospace; background: #1a1b26; color: #a9b1d6; padding: 20px; }
+  h1 { color: #7dcfff; margin-bottom: 8px; }
+  h2 { color: #9ece6a; margin: 24px 0 12px; font-size: 18px; }
+  .subtitle { color: #565f89; margin-bottom: 20px; }
+  
+  .mockups { display: flex; gap: 20px; flex-wrap: wrap; }
+  .mockup { flex: 1; min-width: 320px; background: #1a1b26; border: 1px solid #33467c; border-radius: 8px; overflow: hidden; }
+  .mockup-header { background: #33467c; color: #7dcfff; padding: 8px 12px; font-size: 13px; font-weight: bold; }
+  .mockup-body { padding: 12px; }
+  
+  .msg { margin-bottom: 10px; padding: 4px 8px; border-radius: 4px; }
+  .msg-label { font-size: 11px; margin-bottom: 2px; }
+  .msg-text { font-size: 13px; line-height: 1.5; }
+  
+  /* 方案 A: 左边框 */
+  .opt-a .msg { border-left: 3px solid transparent; padding: 6px 8px 6px 8px; }
+  .opt-a .msg-user { border-left-color: #2ac3de; }
+  .opt-a .msg-ai { border-left-color: #9ece6a; }
+  .opt-a .msg-tool { border-left-color: #565f89; }
+  .opt-a .msg-label { color: #565f89; }
+  
+  /* 方案 B: 小标题（当前风格无边框） */
+  .opt-b .msg { padding: 8px 4px; border-radius: 0; }
+  .opt-b .msg-label { font-weight: bold; font-size: 12px; margin-bottom: 4px; }
+  .opt-b .msg-user .msg-label { color: #2ac3de; }
+  .opt-b .msg-ai .msg-label { color: #9ece6a; }
+  .opt-b .msg-tool .msg-label { color: #565f89; }
+  .opt-b .msg-sep { border-bottom: 1px solid #33467c; margin: 6px 0; }
+  
+  /* 方案 C: 色条 + 标题 */
+  .opt-c .msg { border-left: 3px solid transparent; padding: 6px 8px 6px 10px; }
+  .opt-c .msg-user { border-left-color: #2ac3de; }
+  .opt-c .msg-ai { border-left-color: #9ece6a; }
+  .opt-c .msg-tool { border-left-color: #565f89; }
+  .opt-c .msg-label { font-weight: bold; font-size: 12px; margin-bottom: 4px; }
+  .opt-c .msg-user .msg-label { color: #2ac3de; }
+  .opt-c .msg-ai .msg-label { color: #9ece6a; }
+  .opt-c .msg-tool .msg-label { color: #565f89; }
+
+  /* Claude Code reference */
+  .opt-cc .msg { padding: 4px 0; }
+  .opt-cc .msg-label { color: #565f89; font-size: 11px; }
+  .opt-cc .msg-user .msg-label { color: #7dcfff; }
+  .opt-cc .prompt { color: #7dcfff; }
+</style>
+</head>
+<body>
+
+<h1>Poplar 消息布局方案</h1>
+<p class="subtitle">去掉 Panel 四边框后，角色标签的三种呈现方式</p>
+
+<div class="mockups">
+
+  <!-- 方案 A -->
+  <div class="mockup">
+    <div class="mockup-header">方案 A：左色条</div>
+    <div class="mockup-body opt-a">
+      <div class="msg msg-user">
+        <div class="msg-label">👤 You</div>
+        <div class="msg-text">当前目录下有哪些文件？</div>
+      </div>
+      <div class="msg msg-tool">
+        <div class="msg-label">🔧 list_directory</div>
+        <div class="msg-text" style="color:#565f89">  .venv/  src/  tests/  docs/  examples/</div>
+      </div>
+      <div class="msg msg-ai">
+        <div class="msg-label">🤖 Assistant</div>
+        <div class="msg-text">当前目录包含以下文件和文件夹：<br><br>• <b>.venv/</b> — Python 虚拟环境<br>• <b>src/</b> — 源代码<br>• <b>tests/</b> — 测试代码</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 B -->
+  <div class="mockup">
+    <div class="mockup-header">方案 B：小标题（去掉边框保留标签）</div>
+    <div class="mockup-body opt-b">
+      <div class="msg msg-user">
+        <div class="msg-label">👤 You</div>
+        <div class="msg-text">当前目录下有哪些文件？</div>
+      </div>
+      <div class="msg-sep"></div>
+      <div class="msg msg-tool">
+        <div class="msg-label">🔧 list_directory</div>
+        <div class="msg-text" style="color:#565f89">  .venv/  src/  tests/  docs/  examples/</div>
+      </div>
+      <div class="msg-sep"></div>
+      <div class="msg msg-ai">
+        <div class="msg-label">🤖 Assistant</div>
+        <div class="msg-text">当前目录包含以下文件和文件夹：<br><br>• <b>.venv/</b> — Python 虚拟环境<br>• <b>src/</b> — 源代码</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 C -->
+  <div class="mockup">
+    <div class="mockup-header">方案 C：色条 + 标题（两者都有）</div>
+    <div class="mockup-body opt-c">
+      <div class="msg msg-user">
+        <div class="msg-label">👤 You</div>
+        <div class="msg-text">当前目录下有哪些文件？</div>
+      </div>
+      <div class="msg msg-tool">
+        <div class="msg-label">🔧 list_directory</div>
+        <div class="msg-text" style="color:#565f89">  .venv/  src/  tests/  docs/  examples/</div>
+      </div>
+      <div class="msg msg-ai">
+        <div class="msg-label">🤖 Assistant</div>
+        <div class="msg-text">当前目录包含以下文件和文件夹：<br><br>• <b>.venv/</b> — Python 虚拟环境<br>• <b>src/</b> — 源代码</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Claude Code 参考 -->
+  <div class="mockup">
+    <div class="mockup-header">参考：Claude Code</div>
+    <div class="mockup-body opt-cc">
+      <div class="msg msg-user">
+        <div class="msg-label">❯ 当前目录下有哪些文件？</div>
+      </div>
+      <div class="msg msg-ai">
+        <div class="msg-label">● 当前目录包含：</div>
+        <div class="msg-text" style="color:#565f89">┌───┬──────┐<br>│ 文件 │ 类型 │<br>├───┼──────┤<br>│ src/ │ 目录 │<br>└───┴──────┘</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

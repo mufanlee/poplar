@@ -46,7 +46,7 @@ def build_welcome():
 
 
 class MessageContent(Static):
-    """Renders the message body (Panel / Text)."""
+    """Renders message body — plain text, Markdown, or tool output."""
 
     def __init__(self, message: Message):
         super().__init__()
@@ -56,38 +56,25 @@ class MessageContent(Static):
     def _build(self):
         msg = self._msg
         if msg.role == Role.USER:
-            title = f"👤 {t('title_you')}"
-            self.update(Panel(
-                Text(msg.content),
-                title=title,
-                border_style="blue",
-                padding=(0, 1),
-            ))
+            self.update(Text(f"👤 You\n\n{msg.content}"))
         elif msg.role == Role.ASSISTANT:
-            title = f"🤖 {t('title_assistant')}"
-            self.update(Panel(
-                Markdown(msg.content),
-                title=title,
-                border_style="green",
-                padding=(0, 1),
-                expand=False,
-            ))
+            self.update(Markdown(msg.content))
         elif msg.role == Role.SYSTEM:
             self.update(Text(f"  {msg.content}", style="dim yellow"))
         elif msg.role == Role.TOOL:
             name = msg.name or "tool"
             preview = msg.content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(msg.content) > TOOL_RESULT_PREVIEW_CHARS else msg.content
-            lines = [f"{t('tool_result_prefix', name=name)}:"]
+            body = f"🔧 {name}\n"
             for line in preview.split("\n")[:10]:
-                lines.append(f"  {line}")
-            self.update(Text("\n".join(lines), style="dim"))
+                body += f"  {line}\n"
+            self.update(Text(body.rstrip(), style="dim"))
 
 
 class CopyButton(Static):
     """Small clickable 'copy' label at the top-right of each message."""
 
     def __init__(self, msg: Message):
-        super().__init__("copy")
+        super().__init__("[copy]")
         self._msg = msg
 
     def on_click(self):
@@ -109,21 +96,59 @@ class CopyButton(Static):
     """
 
 
+class MessageBar(Static):
+    """Colored left bar indicating message role."""
+
+    def __init__(self, role: Role):
+        super().__init__("")
+        bar_class = {
+            Role.USER: "bar-user",
+            Role.ASSISTANT: "bar-assistant",
+            Role.TOOL: "bar-tool",
+        }.get(role, "bar-system")
+        self.add_class(bar_class)
+
+
 class MessageWidget(Horizontal):
-    """A single chat message with a copy button at top-right."""
+    """A single chat message: [colored bar] [content] [copy button]."""
 
     def __init__(self, message: Message):
         super().__init__()
         self._msg = message
 
     def compose(self):
+        yield MessageBar(self._msg.role)
         yield MessageContent(self._msg)
         yield CopyButton(self._msg)
 
     DEFAULT_CSS = """
     MessageWidget {
         height: auto;
-        margin: 0 0 0 0;
+        margin: 1 0 0 0;
+    }
+    MessageBar {
+        width: 1;
+        min-width: 1;
+        height: 100%;
+        margin: 0 1 0 0;
+    }
+    .bar-user { background: $accent; }
+    .bar-assistant { background: $success; }
+    .bar-tool { background: $text-disabled; }
+    .bar-system { background: $warning; }
+    MessageContent {
+        width: 1fr;
+        height: auto;
+    }
+    """
+
+    DEFAULT_CSS = """
+    MessageWidget {
+        height: auto;
+        margin: 1 0 0 0;
+    }
+    MessageBar {
+        margin: 0 1 0 0;
     }
     MessageContent {
         width: 1fr;

@@ -63,7 +63,7 @@ class PoplarApp(App):
     """Main Poplar TUI application."""
 
     TITLE = "🌳 Poplar"
-    SUB_TITLE = "AI Agent TUI v0.1.0"
+    SUB_TITLE = "AI Agent TUI v0.2.0"
 
     BINDINGS = [
         Binding("ctrl+q", "quit", "Quit", show=True),

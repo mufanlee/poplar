@@ -543,11 +543,14 @@ class PoplarApp(App):
 
     def _finalize_streaming(self, content: str):
         """Called when streaming completes."""
-        merged = self._merge_tool_content(content)
+        merged, did_merge = self._merge_tool_content(content)
 
-        assistant_msg = Message(role=Role.ASSISTANT, content=merged)
-        self.session.add_message(assistant_msg)
-        self.store.save_message(self.session.id, assistant_msg)
+        if not did_merge:
+            # No merge — add new assistant message as normal
+            assistant_msg = Message(role=Role.ASSISTANT, content=merged)
+            self.session.add_message(assistant_msg)
+            self.store.save_message(self.session.id, assistant_msg)
+
         self._message_count += 1
         self._total_tokens += max(1, estimate_tokens(merged))
         stats.record_assistant_message()
@@ -570,21 +573,35 @@ class PoplarApp(App):
                 self._compress_timer.reset()
             self._compress_timer = self.set_timer(0.5, self._compress_conversation)
 
-    def _merge_tool_content(self, final_content: str) -> str:
-        """Scan session for ASSISTANT(tool_calls)→TOOL chain and merge into final."""
+    def _merge_tool_content(self, final_content: str) -> tuple[str, bool]:
+        """Scan session for ASSISTANT(tool_calls)→TOOL chain, merge, and remove old msgs.
+        Returns (content, did_merge).
+        """
         msgs = self.session.messages
         tool_results = []
-        for m in reversed(msgs):
+        remove_indices = []
+        
+        for i in range(len(msgs) - 1, -1, -1):
+            m = msgs[i]
             if m.role == Role.TOOL:
                 preview = m.content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(m.content) > TOOL_RESULT_PREVIEW_CHARS else m.content
                 tool_results.insert(0, f"🔧 {m.name or 'tool'}\n  {preview}")
+                remove_indices.append(i)
             elif m.role == Role.ASSISTANT and m.tool_calls:
                 prefix = m.content.strip() if m.content and m.content.strip() else ""
                 parts = [prefix] + tool_results + [final_content]
-                return "\n\n".join(p for p in parts if p)
+                merged = "\n\n".join(p for p in parts if p)
+                # Update the existing ASSISTANT message in-place
+                m.content = merged
+                m.tool_calls = None  # clear tool_calls so it renders as normal assistant
+                self.store.save_message(self.session.id, m)
+                # Remove TOOL messages from session
+                for idx in sorted(remove_indices, reverse=True):
+                    del msgs[idx]
+                return merged, True
             elif m.role == Role.USER:
                 break
-        return final_content
+        return final_content, False
 
     def _check_pending(self):
         """If user queued input during streaming, process it now."""

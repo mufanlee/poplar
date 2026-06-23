@@ -1,7 +1,7 @@
 """Chat message display widgets."""
 
 from textual.widgets import Static
-from textual.containers import ScrollableContainer, Horizontal
+from textual.containers import ScrollableContainer, Horizontal, Center
 from textual.reactive import reactive
 from rich.text import Text
 from rich.panel import Panel
@@ -137,13 +137,12 @@ class WelcomeWidget(Static):
 
     DEFAULT_CSS = """
     WelcomeWidget {
-        height: 100%;
-        content-align: center middle;
+        height: auto;
+        width: auto;
     }
     """
 
-    def __init__(self):
-        super().__init__()
+    def on_mount(self):
         self.update(build_welcome())
 
 
@@ -178,7 +177,7 @@ class ChatView(ScrollableContainer):
         # Full rebuild (session switch, compression, initial load)
         self.remove_children()
         if not messages:
-            self.mount(WelcomeWidget())
+            self.mount(Center(WelcomeWidget()))
             self.scroll_end(animate=False)
             self._rendered_count = 0
             return

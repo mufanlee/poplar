@@ -59,8 +59,7 @@ class MessageContent(Static):
             content = Text()
             content.append("> ", style="bold cyan")
             content.append("👤 You\n")
-            for line in msg.content.split("\n"):
-                content.append(f"> {line}\n", style="cyan")
+            content.append(msg.content)
             self.update(content)
         elif msg.role == Role.ASSISTANT:
             from rich.console import Group
@@ -75,7 +74,7 @@ class MessageContent(Static):
             content.append("> ", style="dim")
             content.append(f"🔧 {name}\n", style="bold dim")
             for line in preview.split("\n")[:10]:
-                content.append(f"> {line}\n", style="dim")
+                content.append(f"  {line}\n", style="dim")
             self.update(content)
 
 
@@ -83,7 +82,8 @@ class CopyButton(Static):
     """Small clickable 'copy' label at the top-right of each message."""
 
     def __init__(self, msg: Message):
-        super().__init__("[copy]")
+        super().__init__()
+        self.update(Text("[copy]", style="gray"))
         self._msg = msg
 
     def on_click(self):
@@ -93,8 +93,7 @@ class CopyButton(Static):
 
     DEFAULT_CSS = """
     CopyButton {
-        width: 7;
-        color: gray;
+        width: 6;
     }
     CopyButton:hover {
         color: $text;

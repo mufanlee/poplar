@@ -2,7 +2,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, Static
 from textual.worker import get_current_worker
-from poplar.tui.chat_view import ChatView, MessageWidget
+from poplar.tui.chat_view import ChatView, MessageWidget, MessageContent
 from poplar.tui.composer import Composer, ComposerSubmit
 from poplar.tui.session_picker import SessionPicker
 from poplar.tui.help_screen import HelpScreen
@@ -460,6 +460,7 @@ class PoplarApp(App):
                 )
                 self.session.add_message(assistant_msg)
                 self.store.save_message(self.session.id, assistant_msg)
+                self._streaming_msg = None
 
                 # Persist tool results
                 for i, tc_result in enumerate(turn_result.tool_results):
@@ -500,21 +501,12 @@ class PoplarApp(App):
                     "Tool execution completed. You can continue the conversation.",
                 )
     def _show_tool_result(self, name: str, content: str):
-        """Append tool result inline to the most recent assistant widget."""
-        preview = content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(content) > TOOL_RESULT_PREVIEW_CHARS else content
-        tool_text = f"\n\n🔧 {name}\n  {preview}"
-
+        """Show tool execution result as a system message (mount directly, no reactive)."""
         chat_view = self.query_one(ChatView)
-        for child in reversed(chat_view.children):
-            if isinstance(child, MessageWidget) and child._msg.role == Role.ASSISTANT:
-                child._msg.content += tool_text
-                for cw in child.query(MessageContent):
-                    cw._build()
-                chat_view.scroll_end(animate=False)
-                return
-        # Fallback
-        tool_msg = Message(role=Role.SYSTEM, content=f"🔧 {name}\n  {preview}")
-        chat_view.mount(MessageWidget(tool_msg))
+        preview = content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(content) > TOOL_RESULT_PREVIEW_CHARS else content
+        tool_msg = Message(role=Role.SYSTEM, content=f"{t('tool_result_prefix', name=name)}\n{preview}")
+        w = MessageWidget(tool_msg)
+        chat_view.mount(w)
         chat_view.scroll_end(animate=False)
 
     def _update_streaming(self, content: str):
@@ -551,13 +543,15 @@ class PoplarApp(App):
 
     def _finalize_streaming(self, content: str):
         """Called when streaming completes."""
-        assistant_msg = Message(role=Role.ASSISTANT, content=content)
+        merged = self._merge_tool_content(content)
+
+        assistant_msg = Message(role=Role.ASSISTANT, content=merged)
         self.session.add_message(assistant_msg)
         self.store.save_message(self.session.id, assistant_msg)
         self._message_count += 1
-        self._total_tokens += max(1, estimate_tokens(content))
+        self._total_tokens += max(1, estimate_tokens(merged))
         stats.record_assistant_message()
-        stats.record_api_success(completion_tokens=estimate_tokens(content))
+        stats.record_api_success(completion_tokens=estimate_tokens(merged))
         self._streaming_msg = None
 
         # Sync chat view with session (rebuilds all widgets from session.messages)
@@ -572,10 +566,25 @@ class PoplarApp(App):
         # Auto-compress if token count exceeds threshold
         if self.context_mgr.should_compress(self._total_tokens):
             logger.info("Token count %d exceeds threshold, auto-compressing", self._total_tokens)
-            # Delay to avoid blocking UI after stream finalization
             if self._compress_timer:
                 self._compress_timer.reset()
             self._compress_timer = self.set_timer(0.5, self._compress_conversation)
+
+    def _merge_tool_content(self, final_content: str) -> str:
+        """Scan session for ASSISTANT(tool_calls)→TOOL chain and merge into final."""
+        msgs = self.session.messages
+        tool_results = []
+        for m in reversed(msgs):
+            if m.role == Role.TOOL:
+                preview = m.content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(m.content) > TOOL_RESULT_PREVIEW_CHARS else m.content
+                tool_results.insert(0, f"🔧 {m.name or 'tool'}\n  {preview}")
+            elif m.role == Role.ASSISTANT and m.tool_calls:
+                prefix = m.content.strip() if m.content and m.content.strip() else ""
+                parts = [prefix] + tool_results + [final_content]
+                return "\n\n".join(p for p in parts if p)
+            elif m.role == Role.USER:
+                break
+        return final_content
 
     def _check_pending(self):
         """If user queued input during streaming, process it now."""

@@ -460,7 +460,6 @@ class PoplarApp(App):
                 )
                 self.session.add_message(assistant_msg)
                 self.store.save_message(self.session.id, assistant_msg)
-                self._streaming_msg = None
 
                 # Persist tool results
                 for i, tc_result in enumerate(turn_result.tool_results):
@@ -501,12 +500,21 @@ class PoplarApp(App):
                     "Tool execution completed. You can continue the conversation.",
                 )
     def _show_tool_result(self, name: str, content: str):
-        """Show tool execution result as a system message (mount directly, no reactive)."""
-        chat_view = self.query_one(ChatView)
+        """Append tool result inline to the most recent assistant widget."""
         preview = content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(content) > TOOL_RESULT_PREVIEW_CHARS else content
-        tool_msg = Message(role=Role.SYSTEM, content=f"{t('tool_result_prefix', name=name)}\n{preview}")
-        w = MessageWidget(tool_msg)
-        chat_view.mount(w)
+        tool_text = f"\n\n🔧 {name}\n  {preview}"
+
+        chat_view = self.query_one(ChatView)
+        for child in reversed(chat_view.children):
+            if isinstance(child, MessageWidget) and child._msg.role == Role.ASSISTANT:
+                child._msg.content += tool_text
+                for cw in child.query(MessageContent):
+                    cw._build()
+                chat_view.scroll_end(animate=False)
+                return
+        # Fallback
+        tool_msg = Message(role=Role.SYSTEM, content=f"🔧 {name}\n  {preview}")
+        chat_view.mount(MessageWidget(tool_msg))
         chat_view.scroll_end(animate=False)
 
     def _update_streaming(self, content: str):

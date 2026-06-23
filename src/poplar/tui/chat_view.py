@@ -129,8 +129,7 @@ class MessageWidget(Horizontal):
     MessageBar {
         width: 1;
         min-width: 1;
-        height: 100%;
-        margin: 0 1 0 0;
+        dock: left;
     }
     .bar-user { background: $accent; }
     .bar-assistant { background: $success; }

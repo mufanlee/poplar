@@ -6,7 +6,6 @@ from textual.reactive import reactive
 from rich.text import Text
 from rich.panel import Panel
 from rich.markdown import Markdown
-from rich.color import Color
 from poplar.core.session import Message, Role
 from poplar.i18n import t
 from poplar.tools.base import TOOL_RESULT_PREVIEW_CHARS
@@ -57,18 +56,29 @@ class MessageContent(Static):
     def _build(self):
         msg = self._msg
         if msg.role == Role.USER:
-            self.update(Text(f"👤 You\n\n{msg.content}"))
+            content = Text()
+            content.append("│ ", style="bold cyan")
+            content.append("👤 You\n\n")
+            content.append(msg.content)
+            self.update(content)
         elif msg.role == Role.ASSISTANT:
-            self.update(Markdown(msg.content))
+            from rich.table import Table
+            tbl = Table.grid(expand=True)
+            tbl.add_column("bar", width=2, style="green")
+            tbl.add_column("content", ratio=1)
+            tbl.add_row(Text("│"), Markdown(msg.content))
+            self.update(tbl)
         elif msg.role == Role.SYSTEM:
             self.update(Text(f"  {msg.content}", style="dim yellow"))
         elif msg.role == Role.TOOL:
             name = msg.name or "tool"
             preview = msg.content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(msg.content) > TOOL_RESULT_PREVIEW_CHARS else msg.content
-            body = f"🔧 {name}\n"
+            content = Text()
+            content.append("│ ", style="dim")
+            content.append(f"🔧 {name}\n", style="bold dim")
             for line in preview.split("\n")[:10]:
-                body += f"  {line}\n"
-            self.update(Text(body.rstrip(), style="dim"))
+                content.append(f"  {line}\n", style="dim")
+            self.update(content)
 
 
 class CopyButton(Static):
@@ -97,21 +107,12 @@ class CopyButton(Static):
     """
 
 
-class MessageBar(Static):
 class MessageWidget(Horizontal):
     """A single chat message: [colored left bar] [content] [copy]."""
-
-    _BAR_COLORS = {
-        Role.USER: "#2ac3de",
-        Role.ASSISTANT: "#9ece6a",
-        Role.TOOL: "#565f89",
-    }
 
     def __init__(self, message: Message):
         super().__init__()
         self._msg = message
-        bar_hex = self._BAR_COLORS.get(message.role, "#e0af68")
-        self.styles.border_left = ("thick", Color.parse(bar_hex))
 
     def compose(self):
         yield MessageContent(self._msg)
@@ -121,7 +122,6 @@ class MessageWidget(Horizontal):
     MessageWidget {
         height: auto;
         margin: 1 0 0 0;
-        padding: 0 0 0 1;
     }
     MessageContent {
         width: 1fr;

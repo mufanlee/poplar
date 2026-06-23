@@ -6,6 +6,7 @@ from textual.reactive import reactive
 from rich.text import Text
 from rich.panel import Panel
 from rich.markdown import Markdown
+from rich.color import Color
 from poplar.core.session import Message, Role
 from poplar.i18n import t
 from poplar.tools.base import TOOL_RESULT_PREVIEW_CHARS
@@ -96,18 +97,21 @@ class CopyButton(Static):
     """
 
 
+class MessageBar(Static):
 class MessageWidget(Horizontal):
-    """A single chat message: [colored bar] [content] [copy button]."""
+    """A single chat message: [colored left bar] [content] [copy]."""
+
+    _BAR_COLORS = {
+        Role.USER: "#2ac3de",
+        Role.ASSISTANT: "#9ece6a",
+        Role.TOOL: "#565f89",
+    }
 
     def __init__(self, message: Message):
         super().__init__()
         self._msg = message
-        bar_color = {
-            Role.USER: "$accent",
-            Role.ASSISTANT: "$success",
-            Role.TOOL: "$text-disabled",
-        }.get(message.role, "$warning")
-        self.styles.border_left = ("thick", bar_color)
+        bar_hex = self._BAR_COLORS.get(message.role, "#e0af68")
+        self.styles.border_left = ("thick", Color.parse(bar_hex))
 
     def compose(self):
         yield MessageContent(self._msg)
@@ -118,20 +122,6 @@ class MessageWidget(Horizontal):
         height: auto;
         margin: 1 0 0 0;
         padding: 0 0 0 1;
-    }
-    MessageContent {
-        width: 1fr;
-        height: auto;
-    }
-    """
-
-    DEFAULT_CSS = """
-    MessageWidget {
-        height: auto;
-        margin: 1 0 0 0;
-    }
-    MessageBar {
-        margin: 0 1 0 0;
     }
     MessageContent {
         width: 1fr;

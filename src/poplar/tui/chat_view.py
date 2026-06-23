@@ -93,10 +93,8 @@ class CopyButton(Static):
 
     DEFAULT_CSS = """
     CopyButton {
-        width: 5;
-        height: 1;
-        text-align: center;
-        color: $text-muted;
+        width: 7;
+        color: gray;
     }
     CopyButton:hover {
         color: $text;

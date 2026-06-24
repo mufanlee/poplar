@@ -65,6 +65,31 @@ def test_get_active_provider_name_default():
     assert get_active_provider_name() == DEFAULT_PROVIDER
 
 
+def test_set_language_valid(tmp_path, monkeypatch):
+    """set_language with valid language should save to config."""
+    import poplar.i18n as i18n_mod
+    cfg_file = tmp_path / "config.yaml"
+
+    monkeypatch.setattr("poplar.config.get_config_path", lambda: cfg_file)
+    # Reset init state
+    i18n_mod._language_inited = False
+    i18n_mod._current_language = "en"
+
+    assert set_language("zh") is True
+    assert i18n_mod._current_language == "zh"
+
+
+def test_set_language_invalid():
+    """set_language with invalid language returns False."""
+    assert set_language("jp") is False
+
+
+def test_t_missing_key_warns(capsys):
+    """t() with missing key returns the key itself."""
+    result = t("totally_missing_key_xyz")
+    assert result == "totally_missing_key_xyz"
+
+
 def test_init_config_creates_file():
     """Verify init_config creates a file with all expected sections."""
     import tempfile, os, yaml

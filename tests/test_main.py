@@ -85,3 +85,15 @@ class TestModuleExports:
     def test_setup_crash_handler_is_callable(self):
         from poplar.main import setup_crash_handler
         assert callable(setup_crash_handler)
+
+
+class TestMainReturns:
+    def test_main_returns_zero_with_help(self, monkeypatch, capsys):
+        from poplar.main import main
+        monkeypatch.setattr(sys, "argv", ["poplar", "-h"])
+        assert main() == 0
+
+    def test_main_returns_zero_with_version(self, monkeypatch, capsys):
+        from poplar.main import main
+        monkeypatch.setattr(sys, "argv", ["poplar", "-v"])
+        assert main() == 0

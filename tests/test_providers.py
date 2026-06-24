@@ -70,11 +70,6 @@ class TestProviderProtocol:
             assert hasattr(m, "id")
             assert hasattr(m, "name")
 
-    def test_stream_sync_yields_done(self):
-        """stream_sync should at minimum yield a 'done' event even without tools."""
-        import pytest
-        pytest.skip("Requires live API connection")
-
     def test_message_conversion_openai(self):
         """Verify OpenAI provider can format messages properly."""
         from poplar.providers.openai import OpenAIProvider
@@ -126,11 +121,6 @@ class TestProviderChatMocked:
         # Test get_models (no API call)
         models = p.get_models()
         assert len(models) >= 2
-
-    def test_ollama_stream_sync_yields_done(self):
-        """Ollama stream_sync tries to connect (skip if no server)."""
-        import pytest
-        pytest.skip("Ollama server not available in test environment")
 
     def test_providers_get_models(self):
         """All providers return model lists without API calls."""

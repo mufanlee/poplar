@@ -99,15 +99,6 @@ def test_get_nonexistent_session():
         assert store.get_session("nonexistent") is None
 
 
-def test_message_count():
-    with tempfile.TemporaryDirectory() as tmp:
-        db = os.path.join(tmp, "test.db")
-        store = SessionStore(db)
-        s = store.create_session(title="Chat")
-        store.save_message(s.id, Message(role=Role.USER, content="hi"))
-        store.save_message(s.id, Message(role=Role.SYSTEM, content="thinking"))
-        count = store.get_message_count(s.id)
-        assert count == 1  # excludes system messages
 
 
 def test_auto_create_default_session():

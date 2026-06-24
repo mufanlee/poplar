@@ -1,8 +1,8 @@
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Footer, Header, Static
+from textual.widgets import Footer, Header, Static, TextArea
 from textual.worker import get_current_worker
-from poplar.tui.chat_view import ChatView, MessageWidget, MessageContent
+from poplar.tui.chat_view import ChatView, MessageWidget
 from poplar.tui.composer import Composer, ComposerSubmit
 from poplar.tui.session_picker import SessionPicker
 from poplar.tui.help_screen import HelpScreen
@@ -13,7 +13,6 @@ from poplar.providers import create_provider, get_available_providers
 from poplar.i18n import t
 from poplar.config import get_context_config, get_active_provider_name, get_provider_config, save_config, load_config
 from poplar.persistence.store import SessionStore
-from poplar.tools.base import TOOL_RESULT_PREVIEW_CHARS
 from poplar.core.context import ContextManager, estimate_tokens
 from poplar.core.stats import stats
 from poplar.core.agent_loop import AgentLoop
@@ -189,6 +188,9 @@ class PoplarApp(App):
         chat_view = self.query_one(ChatView)
         chat_view._rendered_count = 0
         chat_view.messages = list(self.session.messages)
+
+        # Focus input
+        self.query_one("#input", TextArea).focus()
 
     def action_session_picker(self):
         """Open session picker modal (Ctrl+S)."""
@@ -501,12 +503,11 @@ class PoplarApp(App):
                     "Tool execution completed. You can continue the conversation.",
                 )
     def _show_tool_result(self, name: str, content: str):
-        """Show tool execution result as a system message (mount directly, no reactive)."""
+        """Mount a tool result widget (session/storage handled by worker)."""
         chat_view = self.query_one(ChatView)
-        preview = content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(content) > TOOL_RESULT_PREVIEW_CHARS else content
-        tool_msg = Message(role=Role.SYSTEM, content=f"{t('tool_result_prefix', name=name)}\n{preview}")
-        w = MessageWidget(tool_msg)
-        chat_view.mount(w)
+        tool_msg = Message(role=Role.TOOL, content=content, name=name)
+        chat_view.mount(MessageWidget(tool_msg))
+        chat_view._rendered_count += 1
         chat_view.scroll_end(animate=False)
 
     def _update_streaming(self, content: str):
@@ -543,23 +544,27 @@ class PoplarApp(App):
 
     def _finalize_streaming(self, content: str):
         """Called when streaming completes."""
-        merged, did_merge = self._merge_tool_content(content)
-
-        if not did_merge:
-            # No merge — add new assistant message as normal
-            assistant_msg = Message(role=Role.ASSISTANT, content=merged)
-            self.session.add_message(assistant_msg)
-            self.store.save_message(self.session.id, assistant_msg)
-
+        assistant_msg = Message(role=Role.ASSISTANT, content=content)
+        self.session.add_message(assistant_msg)
+        self.store.save_message(self.session.id, assistant_msg)
         self._message_count += 1
-        self._total_tokens += max(1, estimate_tokens(merged))
+        self._total_tokens += max(1, estimate_tokens(content))
         stats.record_assistant_message()
-        stats.record_api_success(completion_tokens=estimate_tokens(merged))
+        stats.record_api_success(completion_tokens=estimate_tokens(content))
         self._streaming_msg = None
 
-        # Sync chat view with session (rebuilds all widgets from session.messages)
+        # Full rebuild from session (clears stale streaming widgets)
         chat_view = self.query_one(ChatView)
-        chat_view.messages = list(self.session.messages)
+        chat_view.remove_children()
+        msgs = self.session.messages
+        MAX_VISIBLE = 100
+        display = msgs[-MAX_VISIBLE:] if len(msgs) > MAX_VISIBLE else msgs
+        for msg in display:
+            chat_view.mount(MessageWidget(msg))
+        # Sync internal state to prevent stale rebuild on next add_message
+        chat_view._rendered_count = len(msgs)
+        chat_view.messages = list(msgs)
+        chat_view.scroll_end(animate=False)
 
         self._update_status_bar()
         self._streaming = False
@@ -572,36 +577,6 @@ class PoplarApp(App):
             if self._compress_timer:
                 self._compress_timer.reset()
             self._compress_timer = self.set_timer(0.5, self._compress_conversation)
-
-    def _merge_tool_content(self, final_content: str) -> tuple[str, bool]:
-        """Scan session for ASSISTANT(tool_calls)→TOOL chain, merge, and remove old msgs.
-        Returns (content, did_merge).
-        """
-        msgs = self.session.messages
-        tool_results = []
-        remove_indices = []
-        
-        for i in range(len(msgs) - 1, -1, -1):
-            m = msgs[i]
-            if m.role == Role.TOOL:
-                preview = m.content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(m.content) > TOOL_RESULT_PREVIEW_CHARS else m.content
-                tool_results.insert(0, f"🔧 {m.name or 'tool'}\n  {preview}")
-                remove_indices.append(i)
-            elif m.role == Role.ASSISTANT and m.tool_calls:
-                prefix = m.content.strip() if m.content and m.content.strip() else ""
-                parts = [prefix] + tool_results + [final_content]
-                merged = "\n\n".join(p for p in parts if p)
-                # Update the existing ASSISTANT message in-place
-                m.content = merged
-                m.tool_calls = None  # clear tool_calls so it renders as normal assistant
-                self.store.save_message(self.session.id, m)
-                # Remove TOOL messages from session
-                for idx in sorted(remove_indices, reverse=True):
-                    del msgs[idx]
-                return merged, True
-            elif m.role == Role.USER:
-                break
-        return final_content, False
 
     def _check_pending(self):
         """If user queued input during streaming, process it now."""

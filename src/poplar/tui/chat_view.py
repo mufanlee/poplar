@@ -63,7 +63,7 @@ class MessageContent(Static):
             self.update(content)
         elif msg.role == Role.ASSISTANT:
             from rich.console import Group
-            label = Text("> 🤖 Assistant", style="bold green")
+            label = Text("● 🤖 Assistant", style="bold green")
             self.update(Group(label, Markdown(msg.content)))
         elif msg.role == Role.SYSTEM:
             self.update(Text(f"  {msg.content}", style="dim yellow"))
@@ -71,7 +71,7 @@ class MessageContent(Static):
             name = msg.name or "tool"
             preview = msg.content[:TOOL_RESULT_PREVIEW_CHARS] + "..." if len(msg.content) > TOOL_RESULT_PREVIEW_CHARS else msg.content
             content = Text()
-            content.append("> ", style="dim")
+            content.append("· ", style="dim")
             content.append(f"🔧 {name}\n", style="bold dim")
             for line in preview.split("\n")[:10]:
                 content.append(f"  {line}\n", style="dim")

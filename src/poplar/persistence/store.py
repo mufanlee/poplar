@@ -203,15 +203,3 @@ class SessionStore:
             conn.commit()
         finally:
             conn.close()
-
-    def get_message_count(self, session_id: str) -> int:
-        """Count meaningful (non-system) messages in a session."""
-        conn = self._get_conn()
-        try:
-            row = conn.execute(
-                "SELECT COUNT(*) FROM messages WHERE session_id = ? AND role != 'system'",
-                (session_id,),
-            ).fetchone()
-            return row[0] if row else 0
-        finally:
-            conn.close()

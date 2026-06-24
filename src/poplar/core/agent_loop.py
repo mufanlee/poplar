@@ -60,7 +60,7 @@ class AgentLoop:
 
     def __init__(self, provider, max_turns: Optional[int] = None):
         self.provider = provider
-        self.max_turns = max_turns or get_context_config().get("max_turns", 10)
+        self.max_turns = max_turns or get_context_config().get("max_turns", 100)
         self._cancelled = False
 
     def cancel(self):

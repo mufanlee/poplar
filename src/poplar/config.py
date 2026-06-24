@@ -20,7 +20,7 @@ CONTEXT_DEFAULTS: dict = {
     "max_tokens": 32768,
     "auto_compress_at": 0.7,
     "keep_recent_exchanges": 3,
-    "max_turns": 10,
+    "max_turns": 100,
 }
 
 # Provider defaults

@@ -33,3 +33,4 @@ poplar.log
 poplar-session-*.json
 poplar-session-*.json
 reasonix.toml
+tmp/
